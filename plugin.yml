@@ -1,0 +1,51 @@
+ name: BattleOfBlocks
+ main: fr.cabricraft.batofb.BattleOfBlocks
+ version: 2.0
+ 
+ author: gpotter2
+ website: http://dev.bukkit.org/bukkit-plugins/battleofblocks/
+
+ commands:
+   battleofblocks:
+      description: Battleofblocks setup commands.
+      permission-message: You don't have the permission for do that !
+   batofb:
+      description: In Game Battleofblocks commands.
+      permission-message: You don't have the permission for do that !
+ permissions:
+   battleofblocks.*:
+     description: Gives access to all BattleOfBlocks commands, only OWNER because setup !
+     children:
+       battleofblocks.play: true
+       battleofblocks.admin: true
+       battleofblocks.setup: true
+       battleofblocks.scoreX5: true
+       battleofblocks.chooseteam: true
+     default: false
+   battleofblocks.play:
+     description: Allows you to play BattleOfBlocks
+     default: false
+   battleofblocks.admin:
+     description: Allows you to have admin commands
+     default: false
+   battleofblocks.setup:
+     description: Allows you to setup BattleOfBlocks
+     default: false
+   battleofblocks.scoreX5:
+     default: false
+     description: Score X5
+   battleofblocks.scoreX4:
+     default: false
+     description: Score X4
+   battleofblocks.scoreX3:
+     default: false
+     description: Score X3
+   battleofblocks.scoreX2:
+     default: false
+     description: Score X2
+   battleofblocks.vip:
+     default: false
+     description: Allow to bypass the vip signs !
+   battleofblocks.chooseteam:
+     default: false
+     description: Allow you to choose your team !
