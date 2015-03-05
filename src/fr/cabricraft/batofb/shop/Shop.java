@@ -78,11 +78,11 @@ public class Shop implements Listener {
 		} else {
 			String permission;
 			if(perm == "none"){
-				permission = "battleofblocks.play";
+				permission = null;
 			} else {
 				permission = perm;
 			}
-			if(battleOfBlocks.hasPermission(p, permission)){
+			if(permission == null){
 				l.add(ChatColor.GOLD + "Price: " + price);
 				if(canpay(p, price)) {
 					im.setDisplayName(ChatColor.GREEN + name);
@@ -92,8 +92,19 @@ public class Shop implements Listener {
 					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
 				}
 			} else {
-				im.setDisplayName(ChatColor.RED + name);
-				l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+				if(battleOfBlocks.hasPermission(p, permission)){
+					l.add(ChatColor.GOLD + "Price: " + price);
+					if(canpay(p, price)) {
+						im.setDisplayName(ChatColor.GREEN + name);
+						l.add(ChatColor.GREEN + "Clic here to buy !");
+					} else {
+						im.setDisplayName(ChatColor.RED + name);
+						l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+					}
+				} else {
+					im.setDisplayName(ChatColor.RED + name);
+					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+				}
 			}
 		}
 		l.add(ChatColor.GOLD + sousname);
@@ -115,11 +126,13 @@ public class Shop implements Listener {
 		} else {
 			String permission;
 			if(perm == "none"){
-				permission = "battleofblocks.play";
+				permission = null;
+			} else if(perm == null){
+				permission = null;
 			} else {
 				permission = perm;
 			}
-			if(battleOfBlocks.hasPermission(p, permission)){
+			if(permission == null){
 				l.add(ChatColor.GOLD + "Price: " + price);
 				if(canpay(p, price)) {
 					im.setDisplayName(ChatColor.GREEN + name);
@@ -129,8 +142,19 @@ public class Shop implements Listener {
 					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
 				}
 			} else {
-				im.setDisplayName(ChatColor.RED + name);
-				l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+				if(battleOfBlocks.hasPermission(p, permission)){
+					l.add(ChatColor.GOLD + "Price: " + price);
+					if(canpay(p, price)) {
+						im.setDisplayName(ChatColor.GREEN + name);
+						l.add(ChatColor.GREEN + "Clic here to buy !");
+					} else {
+						im.setDisplayName(ChatColor.RED + name);
+						l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+					}
+				} else {
+					im.setDisplayName(ChatColor.RED + name);
+					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+				}
 			}
 		}
 		l.add(ChatColor.GOLD + sousname);
@@ -171,12 +195,12 @@ public class Shop implements Listener {
 		}
 		inv.setMaxStackSize(999);
 		CustomAdd ca = battleOfBlocks.ca;
-		inv.addItem(getISPerk(Material.BRICK, "forcefield", "Have a forefield for 7 secs !", 4000, p, "battleofblocks.play"));
-		inv.addItem(getISPerk(Material.IRON_BLOCK , "ironman", "Go on an iron golem for 10 sec !", 2000, p,"battleofblocks.play"));
-		inv.addItem(getISPerk(Material.STICK, "knockback", "Have a knockback X stick for 15 secs !", 2500, p,"battleofblocks.play"));
-		inv.addItem(getISPerk(Material.FIREBALL, "fireball", "Shot fireballs with your stick for 10 secs !", 5000, p,"battleofblocks.play"));
-		inv.addItem(getISPerk(Material.BEDROCK, "berserk", "Become a berserk for 10 sec !", 6500, p,"battleofblocks.play"));
-		inv.addItem(getISPerk(Material.TNT, "tntboom", "Kill your ennemies !", 3500, p,"battleofblocks.play"));
+		inv.addItem(getISPerk(Material.BRICK, "forcefield", "Have a forefield for 7 secs !", 4000, p, null));
+		inv.addItem(getISPerk(Material.IRON_BLOCK , "ironman", "Go on an iron golem for 10 sec !", 2000, p, null));
+		inv.addItem(getISPerk(Material.STICK, "knockback", "Have a knockback X stick for 15 secs !", 2500, p, null));
+		inv.addItem(getISPerk(Material.FIREBALL, "fireball", "Shot fireballs with your stick for 10 secs !", 5000, p, null));
+		inv.addItem(getISPerk(Material.BEDROCK, "berserk", "Become a berserk for 10 sec !", 6500, p, null));
+		inv.addItem(getISPerk(Material.TNT, "tntboom", "Kill your ennemies !", 3500, p, null));
 		List<CustomAddPower> l = ca.getList();
 		for(int i = 0; i < l.size(); i++){
 			CustomAddPower cap = l.get(i);
@@ -199,12 +223,12 @@ public class Shop implements Listener {
 			inv.setItem(35, back_arrow);
 		}
 		inv.setMaxStackSize(999);
-		inv.addItem(getISKit(Material.INK_SACK, "Spy", "Super Secret!", 3000, p, "battleofblocks.play"));
-		inv.addItem(getISKit(new SpawnEgg(EntityType.BLAZE).toItemStack(), "Phoenix", "Burn baby burn!", 800, p, "battleofblocks.play"));
-		inv.addItem(getISKit(Material.VINE, "Shamen", "Nature at your side", 800, p, "battleofblocks.play"));
-		inv.addItem(getISKit(Material.STICK, "Healer", "I love healing people!!", 200, p, "battleofblocks.play"));
-		inv.addItem(getISKit(Material.BOOK_AND_QUILL, "Troll", "TROLOLOLOL!", 600, p, "battleofblocks.play"));
-		inv.addItem(getISKit(Material.TNT, "Fury", "Im not happy with you!!!", 500, p, "battleofblocks.play"));
+		inv.addItem(getISKit(Material.INK_SACK, "Spy", "Super Secret!", 3000, p, null));
+		inv.addItem(getISKit(new SpawnEgg(EntityType.BLAZE).toItemStack(), "Phoenix", "Burn baby burn!", 800, p, null));
+		inv.addItem(getISKit(Material.VINE, "Shamen", "Nature at your side", 800, p, null));
+		inv.addItem(getISKit(Material.STICK, "Healer", "I love healing people!!", 200, p, null));
+		inv.addItem(getISKit(Material.BOOK_AND_QUILL, "Troll", "TROLOLOLOL!", 600, p, null));
+		inv.addItem(getISKit(Material.TNT, "Fury", "Im not happy with you!!!", 500, p, null));
 		if(battleOfBlocks.kits != null){
 			Vector<Kit> v = battleOfBlocks.kits.v;
 			for(int i = 0; i < v.size(); i++){

@@ -11,6 +11,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
+import fr.cabricraft.batofb.Updater;
+import fr.cabricraft.batofb.Updater.UpdateResult;
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.signs.SignUtility;
 
@@ -454,6 +456,18 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 									}
 						    		sender.sendMessage(PNC + ChatColor.GREEN + "Configuration saved !");
 						    		return true;
+						    	} else if(args[0].equalsIgnoreCase("update")){
+						    		battleOfBlocks.getLogger().info("Downloading the new version of BattleOfBlocks !");
+						    		Updater up = new Updater(battleOfBlocks, battleOfBlocks.update_id, battleOfBlocks.batofb_file, Updater.UpdateType.DEFAULT, false);
+							        if(up.getResult() == UpdateResult.SUCCESS){
+							        	sender.sendMessage(PNC + ChatColor.GREEN + "Plugin sucessfuly downloaded ! Reloading the plugin...");
+							        	battleOfBlocks.reload(sender);
+							        } else if(up.getResult() == UpdateResult.NO_UPDATE){
+							        	sender.sendMessage(PNC + ChatColor.GREEN + "The plugin already is up to date !");
+							        } else {
+							        	sender.sendMessage(PNC + ChatColor.RED + "Plugin couldn't be downloaded !");
+							        }
+						    		return true;
 						    	} else {
 					    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 						    		return true;
@@ -463,7 +477,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 							  }
 	  } else if(cmd.getName().equalsIgnoreCase("batofb")){
 			  if(sender instanceof Player){
-				  if(battleOfBlocks.hasPermission(sender, "battleofblocks.play")){
+				  if(battleOfBlocks.hasPermission(sender, "battleofblocks.play") || battleOfBlocks.playbydefault){
 			    		try {
 			    			String test = args[0];
 						} catch (Exception e) {
@@ -510,6 +524,8 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 									 if(deconowright == 0){
 										 sender.sendMessage(PNC + ChatColor.RED +  "You are not in any Arena !");
 									 }
+								 } else {
+									 sender.sendMessage(PNC + "Usage : /batofb leave");
 								 }
 							} else {
 								  sender.sendMessage(PNC + "Usage : /batofb leave");
@@ -559,6 +575,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcontrolname <name>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the name of the instance");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcoinskills <number>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the server coins reward of any kills");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks saveall   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Save all the arenas (The arenas are saved automatically during the server's stop)");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks update   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Update the plugin !");
 		}
 		
 	}

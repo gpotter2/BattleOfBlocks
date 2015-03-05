@@ -1,17 +1,31 @@
 package fr.cabricraft.batofb;
 
+import java.awt.Event;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URLClassLoader;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,9 +35,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permissible;
+import org.bukkit.plugin.InvalidDescriptionException;
+import org.bukkit.plugin.InvalidPluginException;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import fr.cabricraft.batofb.Updater.UpdateResult;
 import fr.cabricraft.batofb.arenas.Arena;
@@ -61,7 +80,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public int onwin = 100;
   public int facteurkills = 10;
   public boolean cheatadmin = false;
-  boolean update = true;
+  public boolean check_update = true;
   public Economy econ = null;
   public Permission permission = null;
   public Messages msg;
@@ -71,10 +90,14 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public Kits kits = null;
   public int respawnTime = 0;
   public Shop shop;
+  public boolean playbydefault = true;
   
   public boolean stop = false;
   
   private boolean updatenotice = false;
+  private String updatenoticemessage = null;
+  public int update_id = 76657;
+  public File batofb_file;
   
   public void onLoad() {}
   
@@ -118,6 +141,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     {
       this.stop = false;
       this.battleOfBlocks = this;
+      this.batofb_file = getFile();
       
       //LOADING...
       //LOADING ALL OTHER DATAS
@@ -129,9 +153,13 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       loadsigns();
       //
       shop = new Shop(battleOfBlocks);
-      if (this.update) {
-	        Updater up = new Updater(this, 76657, getFile(), Updater.UpdateType.DEFAULT, true);
-	        if(up.getResult() == UpdateResult.SUCCESS) updatenotice = true;
+      if (this.check_update) {
+	        Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
+	        if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
+	        	getLogger().info("A new version of the plugin is available !");
+	        	updatenotice = true;
+	        	updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
+	        }
       }
       
       try {
@@ -225,8 +253,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   }
   
   public void reloadandremake()
-    throws IOException
-  {
+    throws IOException {
     FileConfiguration config = conffile("saves/save.yml");
     if (config == null) {
       getLogger().severe("CONFIGURATION FILE = NULL ! (reloadandmake)");
@@ -385,8 +412,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public void join(PlayerJoinEvent event){
 	  if(updatenotice){
 		  if(event.getPlayer().hasPermission("battleofblocks.setup")){
-			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] A new great update of the plugin was downloaded !");
-			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] Just reload the Plugin with the command '/reload' !!!");
+			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] A new great update of the plugin is available !");
+			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] Your version: " + ChatColor.RED + "v" + getDescription().getVersion() + ChatColor.GREEN + ". New version: " + ChatColor.GOLD + updatenoticemessage + ChatColor.GREEN + " !");
+			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] To download it, just type: '/battleofblocks update' !");
 		  }
 	  }
   }
@@ -539,10 +567,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("Configuration.DefaultFacteurKills", Integer.valueOf(facteurkills));
     conf.set("Configuration.DefaultCoinsOnWin", Integer.valueOf(onwin));
     conf.set("Configuration.Timebeforestart", Integer.valueOf(time));
+    conf.set("Configuration.PlayByDefault", Boolean.valueOf(playbydefault));
     conf.set("Configuration.CheatAdmin", Boolean.valueOf(cheatadmin));
     conf.set("Configuration.EconomyEnabled", Boolean.valueOf(ecoenabled));
     conf.set("Configuration.ControlName", controlname);
-    conf.set("Configuration.AutoUpdate", Boolean.valueOf(update));
+    conf.set("Configuration.CheckUpdate", Boolean.valueOf(check_update));
     conf.set("Configuration.RespawnTimeInSecs", Integer.valueOf(respawnTime));
     saveConfig();
   }
@@ -592,8 +621,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       if (cs.isSet("Timebeforestart")) {
         time = cs.getInt("Timebeforestart");
       }
-      if (cs.isSet("CheatAdmin")) {
-        cheatadmin = cs.getBoolean("CheatAdmin");
+      if (cs.isSet("RespawnTimeInSecs")) {
+    	  respawnTime = cs.getInt("RespawnTimeInSecs");
+      }
+      if (cs.isSet("PlayByDefault")) {
+        playbydefault = cs.getBoolean("PlayByDefault");
       }
       if (cs.isSet("ControlName")) {
     	  String temp = cs.getString("ControlName");
@@ -604,8 +636,8 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     		  controlname = new String(temp);
     	  }
       }
-      if (cs.isSet("AutoUpdate")) {
-        update = cs.getBoolean("AutoUpdate");
+      if (cs.isSet("CheckUpdate")) {
+        check_update = cs.getBoolean("CheckUpdate");
       }
       if (cs.isSet("EconomyEnabled")) {
     	  ecoenabled = cs.getBoolean("EconomyEnabled");
@@ -613,6 +645,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       if (cs.isSet("RespawnTimeInSecs")) {
     	  respawnTime = cs.getInt("RespawnTimeInSecs");
       }
+      
       getLogger().info("Plugin configuration loaded !");
     }
   }
@@ -696,6 +729,103 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	  } else {
 		  return p.hasPermission(permission);
 	  }
+  	}
+	    @SuppressWarnings("unchecked")
+		public void reload(CommandSender s) {
+	    	
+	    	final Plugin plugin = this;
+	    	final CommandSender sender = s;
+	    	
+	    	new BukkitRunnable() {
+				@Override
+				public void run() {
+			        PluginManager pluginManager = Bukkit.getPluginManager();
+			        SimpleCommandMap commandMap = null;
+			        List<Plugin> plugins = null;
+			        Map<String, Plugin> names = null;
+			        Map<String, Command> commands = null;
+			        Map<Event, SortedSet<RegisteredListener>> listeners = null;
+			        boolean reloadlisteners = true;
+			        if (pluginManager != null) {
+			            try {
+			                Field pluginsField = Bukkit.getPluginManager().getClass().getDeclaredField("plugins");
+			                pluginsField.setAccessible(true);
+			                plugins = (List<Plugin>) pluginsField.get(pluginManager);
+			                Field lookupNamesField = Bukkit.getPluginManager().getClass().getDeclaredField("lookupNames");
+			                lookupNamesField.setAccessible(true);
+			                names = (Map<String, Plugin>) lookupNamesField.get(pluginManager);
+			                try {
+			                    Field listenersField = Bukkit.getPluginManager().getClass().getDeclaredField("listeners");
+			                    listenersField.setAccessible(true);
+			                    listeners = (Map<Event, SortedSet<RegisteredListener>>) listenersField.get(pluginManager);
+			                } catch (Exception e) {
+			                    reloadlisteners = false;
+			                }
+			                Field commandMapField = Bukkit.getPluginManager().getClass().getDeclaredField("commandMap");
+			                commandMapField.setAccessible(true);
+			                commandMap = (SimpleCommandMap) commandMapField.get(pluginManager);
+			                Field knownCommandsField = SimpleCommandMap.class.getDeclaredField("knownCommands");
+			                knownCommandsField.setAccessible(true);
+			                commands = (Map<String, Command>) knownCommandsField.get(commandMap);
+			            } catch (NoSuchFieldException e) {
+			                e.printStackTrace();
+			                return;
+			            } catch (IllegalAccessException e) {
+			                e.printStackTrace();
+			                return;
+			            }
+			        }
+			        pluginManager.disablePlugin(plugin);
+			        if (plugins != null && plugins.contains(plugin))
+			            plugins.remove(plugin);
+			        if (names != null && names.containsKey(plugin))
+			            names.remove(plugin);
+			        if (listeners != null && reloadlisteners) {
+			            for (SortedSet<RegisteredListener> set : listeners.values()) {
+			                for (Iterator<RegisteredListener> it = set.iterator(); it.hasNext(); ) {
+			                    RegisteredListener value = it.next();
+			                    if (value.getPlugin() == plugin) {
+			                        it.remove();
+			                    }
+			                }
+			            }
+			        }
+			        if (commandMap != null) {
+			            for (Iterator<Map.Entry<String, Command>> it = commands.entrySet().iterator(); it.hasNext(); ) {
+			                Map.Entry<String, Command> entry = it.next();
+			                if (entry.getValue() instanceof PluginCommand) {
+			                    PluginCommand c = (PluginCommand) entry.getValue();
+			                    if (c.getPlugin() == plugin) {
+			                        c.unregister(commandMap);
+			                        it.remove();
+			                    }
+			                }
+			            }
+			        }
+			        ClassLoader cl = plugin.getClass().getClassLoader();
+			        if (cl instanceof URLClassLoader) {
+			            try {
+			                ((URLClassLoader) cl).close();
+			            } catch (IOException ex) {
+			                Logger.getLogger(BattleOfBlocks.class.getName()).log(Level.SEVERE, null, ex);
+			            }
+			        }
+			        System.gc();
+			        Plugin target = null;
+			        try {
+			            target = Bukkit.getPluginManager().loadPlugin(getFile());
+			        } catch (InvalidDescriptionException e) {
+			            e.printStackTrace();
+			            return;
+			        } catch (InvalidPluginException e) {
+			            e.printStackTrace();
+			            return;
+			        }
+			        target.onLoad();
+			        Bukkit.getPluginManager().enablePlugin(target);
+			        sender.sendMessage(ChatColor.RED + "[BattleOfBlocks]" + ChatColor.GREEN + " Plugin sucessfuly reloaded !");
+				}
+			}.runTaskLater(this, 10);
   }
   
 }

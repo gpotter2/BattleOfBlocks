@@ -920,7 +920,7 @@ public void resetArena(){
   }
   
   public void join(Player player) {
-    if (battleOfBlocks.hasPermission(player, "battleofblocks.play")) {
+    if (battleOfBlocks.hasPermission(player, "battleofblocks.play") || battleOfBlocks.playbydefault) {
       if (!isstarted) {
         if (!isinGame(player)) {
           if (getConnectedPlayers() <= pmax) {
@@ -1007,9 +1007,9 @@ public void setInventorySelect(Player p)
   
   @SuppressWarnings("deprecation")
 public void setKitChooser(Player p){
-	  p.getInventory().setItem(8, getIS(Material.NETHER_STAR, "Kit chooser", "Choose your kit", "battleofblocks.play", p));
+	  p.getInventory().setItem(8, getIS(Material.NETHER_STAR, "Kit chooser", "Choose your kit", null, p));
 	  if(battleOfBlocks.vaultenabled_economy){
-		  p.getInventory().setItem(7, getIS(Material.EMERALD, "OutShop", "Shop", "battleofblocks.play", p));
+		  p.getInventory().setItem(7, getIS(Material.EMERALD, "OutShop", "Shop", null, p));
 	  }
 	  p.updateInventory();
   }
@@ -1661,12 +1661,17 @@ public void onSelectTeam(BlockPlaceEvent event) {
 		i.setAmount(1);
 		ItemMeta im = i.getItemMeta();
 		List<String> l = new LinkedList<String>();
-		if(battleOfBlocks.hasPermission(p, perm)){
+		if(perm != null){
+			if(battleOfBlocks.hasPermission(p, perm)){
+				im.setDisplayName(ChatColor.GREEN + name);
+				l.add(ChatColor.GOLD + sousname);
+			} else {
+				im.setDisplayName(ChatColor.RED + name);
+				l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
+			}
+		} else {
 			im.setDisplayName(ChatColor.GREEN + name);
 			l.add(ChatColor.GOLD + sousname);
-		} else {
-			im.setDisplayName(ChatColor.RED + name);
-			l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
 		}
 		im.setLore(l);
 		i.setItemMeta(im);
@@ -1677,7 +1682,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
 		Inventory inv;
 		inv = Bukkit.createInventory(p,27,ChatColor.GREEN + "BattleOfBlocks KITS ! " + arenaname);
 		inv.setMaxStackSize(999);
-		inv.addItem(getIS(Material.BONE, "Mage", "Harness the magic !", "battleofblocks.play", p));
+		inv.addItem(getIS(Material.BONE, "Mage", "Harness the magic !", null, p));
 		inv.addItem(getIS(Material.INK_SACK, "Spy", "Super Secret!", "battleofblocks.hasbuy.kit.Spy", p));
 		inv.addItem(getIS(new SpawnEgg(EntityType.BLAZE).toItemStack(), "Phoenix", "Burn baby burn!", "battleofblocks.hasbuy.kit.Phoenix", p));
 		inv.addItem(getIS(Material.VINE, "Shamen", "Nature at your side", "battleofblocks.hasbuy.kit.Shamen", p));
