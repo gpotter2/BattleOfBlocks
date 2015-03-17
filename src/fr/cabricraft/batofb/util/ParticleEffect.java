@@ -1,4 +1,5 @@
 package fr.cabricraft.batofb.util;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -510,7 +511,13 @@ public enum ParticleEffect {
 	 */
 	private static boolean isLongDistance(Location location, List<Player> players) {
 		for (Player player : players) {
-			if (player.getLocation().distanceSquared(location) < 65536) {
+			Location location_verified;
+			if(location.getWorld().getName().equals(player.getWorld().getName())) location_verified = location;
+			else {
+				location_verified = location;
+				location_verified.setWorld(Bukkit.getWorld(player.getWorld().getUID()));
+			}
+			if (player.getLocation().distanceSquared(location_verified) < 65536) {
 				continue;
 			}
 			return true;

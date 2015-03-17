@@ -1,3 +1,21 @@
+/*
+ *  Copyright (C) 2015 Gabriel POTTER (gpotter2)
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
+
 package fr.cabricraft.batofb.signs;
 
 import java.util.LinkedList;
@@ -32,6 +50,7 @@ public class SignUtility implements Listener {
 	    	  if(ls.getBlock().getType() == Material.WALL_SIGN || ls.getBlock().getType() == Material.SIGN || ls.getBlock().getType() == Material.SIGN_POST) {
 	    		  Sign s = (Sign) ls.getBlock().getState();
 				  Arena ar = battleOfBlocks.getArena(s.getLine(3));
+				  if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 			      s.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
 			      s.setLine(2, ar.getConnectedPlayers() + "/" + ar.pmax);
 			      if(ar.getConnectedPlayers() >= ar.pmax) {
@@ -60,6 +79,7 @@ public class SignUtility implements Listener {
 		    	String name = lines[1];
 		    	if(battleOfBlocks.Arenaexist(name)){
 					event.getPlayer().sendMessage(ChatColor.GOLD + "[BattleOfBlocks] You created a BSign on arena " + name + " !");
+					if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 				    event.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
 				    event.setLine(3, battleOfBlocks.getArena(name).getName());
 				    Arena ar = battleOfBlocks.getArena(name);
@@ -79,6 +99,7 @@ public class SignUtility implements Listener {
 					event.setLine(1, ChatColor.RED + "ArenaName");
 		    	}
 		    } else if (lines[0].equalsIgnoreCase("[batofb-shop]")) {
+		    	if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 		    	event.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
 		    	event.setLine(1, ChatColor.DARK_AQUA + "[Shop]");
 		    } else if(lines[0].equalsIgnoreCase("[batofb-dis]")){
@@ -114,6 +135,7 @@ public class SignUtility implements Listener {
 			    				return;
 			    			}
 			    		}
+			    		if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 			    		if(lines[0].equalsIgnoreCase(ChatColor.BLUE + battleOfBlocks.controlname)) {
 			    			if(lines[1].equalsIgnoreCase(ChatColor.DARK_AQUA + "[Shop]")){
 			    				if(battleOfBlocks.vaultenabled_economy){
