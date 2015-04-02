@@ -45,6 +45,7 @@ public class Messages {
 		ALREADY_IN_GAME = PNC + "&cYou are already in game !";
 		GAME_ALREADY_STARTED = PNC + "&cGame already started !";
 		TEAM_FULL = PNC + "&cThis team is full !";
+		GAME_FULL = PNC + "&cThe game is full !";
 		YOU_TEAM_BLUE = PNC + "&aYou are in BLUE team !";
 		YOU_TEAM_RED = PNC + "&aYou are in RED team !";
 		YOUR_TEAM_BLOCK = PNC + "&cYou cannot destroy your team's blocks !";
@@ -102,6 +103,7 @@ public class Messages {
 	public String YOUR_TEAM_BLOCK;
 	public String BLUE_LIVES;
 	public String RED_LIVES;
+	public String GAME_FULL;
 	public String NO_COMMANDS_IN_GAME;
 	public String GAME_START_IN_X_SECONDS;
 	
@@ -141,60 +143,60 @@ public class Messages {
 	
 	public String structurate(String ToStructurate, Player concerned, Player killer){
 		String DoneStructurate = ToStructurate;
-		if(killer != null) DoneStructurate = DoneStructurate.replaceAll("%killer%", killer.getDisplayName());
-		if(concerned != null) DoneStructurate = DoneStructurate.replaceAll("%player%", concerned.getDisplayName());
+		if(killer != null) DoneStructurate = DoneStructurate.replace("%killer%", killer.getDisplayName());
+		if(concerned != null) DoneStructurate = DoneStructurate.replace("%player%", concerned.getDisplayName());
 		return DoneStructurate;
 	}
 	public String structurateLives(String ToStructurate, int lives){
 		String DoneStructurate = ToStructurate;
-		DoneStructurate = DoneStructurate.replaceAll("%lives%", Integer.toString(lives));
+		DoneStructurate = DoneStructurate.replace("%lives%", Integer.toString(lives));
 		return DoneStructurate;
 	}
 	public String structuratePerks(String ToStructurate, String perk){
 		String DoneStructurate = ToStructurate;
-		DoneStructurate = DoneStructurate.replaceAll("%perk%", perk);
+		DoneStructurate = DoneStructurate.replace("%perk%", perk);
 		return DoneStructurate;
 	}
 	public String structuratePowerups(String ToStructurate,String Powerup, Player player){
 		String DoneStructurate = ToStructurate;
-		if(Powerup != null) DoneStructurate = DoneStructurate.replaceAll("%powerup%", Powerup);
-		if(player != null) DoneStructurate = DoneStructurate.replaceAll("%player%", player.getDisplayName());
+		if(Powerup != null) DoneStructurate = DoneStructurate.replace("%powerup%", Powerup);
+		if(player != null) DoneStructurate = DoneStructurate.replace("%player%", player.getDisplayName());
 		return DoneStructurate;
 	}
 	public String structurateMoney(String ToStructurate, String Money){
 		String DoneStructurate = ToStructurate;
-		DoneStructurate = DoneStructurate.replaceAll("%money%", Money);
+		DoneStructurate = DoneStructurate.replace("%money%", Money);
 		return DoneStructurate;
 	}
 	public String stucturateTime(String ToStructurate, int time){
 		String DoneStructurate = ToStructurate;
-		DoneStructurate = DoneStructurate.replaceAll("%secs%", String.valueOf(time));
+		DoneStructurate = DoneStructurate.replace("%secs%", String.valueOf(time));
 		return DoneStructurate;
 	}
 	public String putColor(String brut){
 		String Colordone = brut;
-		Colordone = Colordone.replaceAll("&4", ChatColor.DARK_RED + "");
-		Colordone = Colordone.replaceAll("&c", ChatColor.RED + "");
-		Colordone = Colordone.replaceAll("&6", ChatColor.GOLD + "");
-		Colordone = Colordone.replaceAll("&e", ChatColor.YELLOW + "");
-		Colordone = Colordone.replaceAll("&2", ChatColor.DARK_GREEN + "");
-		Colordone = Colordone.replaceAll("&a", ChatColor.GREEN + "");
-		Colordone = Colordone.replaceAll("&b", ChatColor.AQUA + "");
-		Colordone = Colordone.replaceAll("&3", ChatColor.DARK_AQUA + "");
-		Colordone = Colordone.replaceAll("&1", ChatColor.DARK_BLUE + "");
-		Colordone = Colordone.replaceAll("&9", ChatColor.BLUE + "");
-		Colordone = Colordone.replaceAll("&d", ChatColor.LIGHT_PURPLE + "");
-		Colordone = Colordone.replaceAll("&5", ChatColor.DARK_PURPLE + "");
-		Colordone = Colordone.replaceAll("&f", ChatColor.WHITE + "");
-		Colordone = Colordone.replaceAll("&7", ChatColor.GRAY + "");
-		Colordone = Colordone.replaceAll("&8", ChatColor.DARK_GRAY + "");
-		Colordone = Colordone.replaceAll("&0", ChatColor.BLACK + "");
-		Colordone = Colordone.replaceAll("&r", ChatColor.RESET + "");
-		Colordone = Colordone.replaceAll("&m", ChatColor.STRIKETHROUGH + "");
-		Colordone = Colordone.replaceAll("&o", ChatColor.ITALIC + "");
-		Colordone = Colordone.replaceAll("&k", ChatColor.MAGIC + "");
-		Colordone = Colordone.replaceAll("&l", ChatColor.BOLD + "");
-		Colordone = Colordone.replaceAll("&n", ChatColor.UNDERLINE + "");
+		Colordone = Colordone.replace("&4", ChatColor.DARK_RED + "");
+		Colordone = Colordone.replace("&c", ChatColor.RED + "");
+		Colordone = Colordone.replace("&6", ChatColor.GOLD + "");
+		Colordone = Colordone.replace("&e", ChatColor.YELLOW + "");
+		Colordone = Colordone.replace("&2", ChatColor.DARK_GREEN + "");
+		Colordone = Colordone.replace("&a", ChatColor.GREEN + "");
+		Colordone = Colordone.replace("&b", ChatColor.AQUA + "");
+		Colordone = Colordone.replace("&3", ChatColor.DARK_AQUA + "");
+		Colordone = Colordone.replace("&1", ChatColor.DARK_BLUE + "");
+		Colordone = Colordone.replace("&9", ChatColor.BLUE + "");
+		Colordone = Colordone.replace("&d", ChatColor.LIGHT_PURPLE + "");
+		Colordone = Colordone.replace("&5", ChatColor.DARK_PURPLE + "");
+		Colordone = Colordone.replace("&f", ChatColor.WHITE + "");
+		Colordone = Colordone.replace("&7", ChatColor.GRAY + "");
+		Colordone = Colordone.replace("&8", ChatColor.DARK_GRAY + "");
+		Colordone = Colordone.replace("&0", ChatColor.BLACK + "");
+		Colordone = Colordone.replace("&r", ChatColor.RESET + "");
+		Colordone = Colordone.replace("&m", ChatColor.STRIKETHROUGH + "");
+		Colordone = Colordone.replace("&o", ChatColor.ITALIC + "");
+		Colordone = Colordone.replace("&k", ChatColor.MAGIC + "");
+		Colordone = Colordone.replace("&l", ChatColor.BOLD + "");
+		Colordone = Colordone.replace("&n", ChatColor.UNDERLINE + "");
 		return Colordone;
 	}
 	public void load(){
@@ -202,6 +204,7 @@ public class Messages {
 			if(config.getConfigurationSection("Messages") != null){
 				ConfigurationSection cs = config.getConfigurationSection("Messages");
 				if(cs.getString("ALREADY_IN_GAME") != null) ALREADY_IN_GAME = PNC + cs.getString("ALREADY_IN_GAME");
+				if(cs.getString("GAME_FULL") != null) GAME_FULL = PNC + cs.getString("GAME_FULL");
 				if(cs.getString("BE_VIP") != null) BE_VIP = PNC + cs.getString("BE_VIP");
 				if(cs.getString("BLUE_LIVES") != null) BLUE_LIVES = PNC + cs.getString("BLUE_LIVES");
 				if(cs.getString("BLUE_WIN") != null) BLUE_WIN = PNC + cs.getString("BLUE_WIN");
@@ -249,6 +252,7 @@ public class Messages {
 	public void save(FileConfiguration config){
 		String section = "Messages.";
 		config.set(section + "ALREADY_IN_GAME", ALREADY_IN_GAME.replace(PNC, ""));
+		config.set(section + "GAME_FULL", GAME_FULL.replace(PNC, ""));
 		config.set(section + "BE_VIP",BE_VIP.replace(PNC, ""));
 		config.set(section + "BLUE_LIVES",BLUE_LIVES.replace(PNC, ""));
 		config.set(section + "BLUE_WIN",BLUE_WIN.replace(PNC, ""));

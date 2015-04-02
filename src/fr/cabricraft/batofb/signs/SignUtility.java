@@ -49,20 +49,23 @@ public class SignUtility implements Listener {
 	      for(Location ls : battleOfBlocks.s){
 	    	  if(ls.getBlock().getType() == Material.WALL_SIGN || ls.getBlock().getType() == Material.SIGN || ls.getBlock().getType() == Material.SIGN_POST) {
 	    		  Sign s = (Sign) ls.getBlock().getState();
-				  Arena ar = battleOfBlocks.getArena(s.getLine(3));
-				  if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
-			      s.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
-			      s.setLine(2, ar.getConnectedPlayers() + "/" + ar.pmax);
-			      if(ar.getConnectedPlayers() >= ar.pmax) {
-				  s.setLine(1, ChatColor.BLUE + "[Full]");
-			      } else if(ar.isstarted == false && (ar.vip + ar.getConnectedPlayers()) >= ar.pmax){
-					  s.setLine(1, ChatColor.LIGHT_PURPLE + "[VIP]");
-				  } else if(ar.isstarted) {
-					  s.setLine(1, ChatColor.RED + "[Busy]");
-				  } else {
-					  s.setLine(1, ChatColor.GREEN + "[Join]");
-				  }
-				  s.update();
+	    		  String arena_name = s.getLine(3);
+	    		  if(battleOfBlocks.Arenaexist(arena_name)){
+					  Arena ar = battleOfBlocks.getArena(s.getLine(3));
+					  if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
+				      s.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
+				      s.setLine(2, ar.getConnectedPlayers() + "/" + ar.pmax);
+				      if(ar.getConnectedPlayers() >= ar.pmax) {
+					  s.setLine(1, ChatColor.BLUE + "[Full]");
+				      } else if(ar.isstarted == false && (ar.vip + ar.getConnectedPlayers()) >= ar.pmax){
+						  s.setLine(1, ChatColor.LIGHT_PURPLE + "[VIP]");
+					  } else if(ar.isstarted) {
+						  s.setLine(1, ChatColor.RED + "[Busy]");
+					  } else {
+						  s.setLine(1, ChatColor.GREEN + "[Join]");
+					  }
+					  s.update();
+	    		  }
 	    	  } else {
 	    		  s_to_remove.add(ls);
 	    	  }
@@ -129,12 +132,6 @@ public class SignUtility implements Listener {
 			    	if(b.getType() == Material.SIGN || b.getType() == Material.SIGN_POST || b.getType() == Material.WALL_SIGN){
 			    		Sign s = (Sign) b.getState();
 			    		String[] lines = s.getLines();
-			    		if(lines[1].equals(ChatColor.LIGHT_PURPLE + "[VIP]")){
-			    			if(!(battleOfBlocks.hasPermission(event.getPlayer(), "battleofblocks.vip"))){
-			    				event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.BE_VIP));
-			    				return;
-			    			}
-			    		}
 			    		if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 			    		if(lines[0].equalsIgnoreCase(ChatColor.BLUE + battleOfBlocks.controlname)) {
 			    			if(lines[1].equalsIgnoreCase(ChatColor.DARK_AQUA + "[Shop]")){
@@ -160,7 +157,11 @@ public class SignUtility implements Listener {
 							    	} else if(ar.pmax < ar.startmin) { 
 							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : players max number is less than players minimum start !");
 							    	} else if(ar.isstarted) { 
-							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] The game already started !");
+							    		event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_ALREADY_STARTED));
+							    	} else if(ar.getConnectedPlayers() >= ar.pmax){
+							    		event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_FULL));
+							    	} else if(((ar.vip + ar.getConnectedPlayers()) >= ar.pmax) && !(battleOfBlocks.hasPermission(event.getPlayer(), "battleofblocks.vip"))){
+							    		event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.BE_VIP));
 							    	} else {
 							    		battleOfBlocks.getArena(name).join(event.getPlayer());
 							    	}

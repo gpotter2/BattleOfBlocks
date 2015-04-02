@@ -227,6 +227,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    	} else if(args[0].equalsIgnoreCase("addarena")){
 						    		try {
 						    			String test = args[1];
+						    			if(test.length() > 15){
+							    			sender.sendMessage(PNC + "The length of the arena name musn't be more than 15 caracters !");
+											return true;
+							    		}
 									} catch (Exception e) {
 						    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 										return true;
@@ -244,6 +248,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		try {
 						    			String test = args[1];
 						    			param = new Integer(args[1]);
+						    			if(!test_more(param, 2)){
+						    				sender.sendMessage(PNC + "You cannot set a number under 1 !");
+						    				return true;
+						    			}
 									} catch (Exception e) {
 						    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 										return true;
@@ -258,7 +266,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    			battleOfBlocks.getArena(args[2]).life = param;
 						    			battleOfBlocks.getArena(args[2]).bluelife = param;
 						    			battleOfBlocks.getArena(args[2]).redlife = param;
-						    			sender.sendMessage(PNC + ChatColor.GREEN + "Lives set !");
+						    			sender.sendMessage(PNC + ChatColor.GREEN + param + " lives set to the arena " + args[2] + "!");
 						    		} else {
 						    			sender.sendMessage(PNC + "This Arena doesn't exist !");
 						    		}
@@ -269,8 +277,8 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		try {
 						    			String test = args[1];
 						    			param = new Integer(args[1]);
-						    			if(param <= 1){
-						    				sender.sendMessage(PNC + "You cannot set a Maximum players number under 2 !");
+						    			if(!test_more(param, 2)){
+						    				sender.sendMessage(PNC + "You cannot set a number under 2 !");
 						    				return true;
 						    			}
 									} catch (Exception e) {
@@ -297,6 +305,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		try {
 						    			String test = args[1];
 						    			param = new Integer(args[1]);
+						    			if(!test_more(param, 2)){
+						    				sender.sendMessage(PNC + "You cannot set a number under 2 !");
+						    				return true;
+						    			}
 									} catch (Exception e) {
 						    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 										return true;
@@ -316,7 +328,6 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		}
 						    		return true;
 						    	} else if(args[0].equalsIgnoreCase("addreward")){
-						    		int param;
 						    		try {
 						    			String test = args[1];
 									} catch (Exception e) {
@@ -355,6 +366,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		try {
 						    			String test = args[1];
 						    			param = new Integer(args[1]);
+						    			if(!test_more(param, 5)){
+						    				sender.sendMessage(PNC + "You cannot set a number under 5 !");
+						    				return true;
+						    			}
 									} catch (Exception e) {
 						    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 										return true;
@@ -411,6 +426,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		try {
 						    			String test = args[1];
 						    			param = new Integer(args[1]);
+						    			if(!test_more(param, 2)){
+						    				sender.sendMessage(PNC + "You cannot set a number under 2 !");
+						    				return true;
+						    			}
 									} catch (Exception e) {
 						    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
 										return true;
@@ -467,12 +486,20 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    		sender.sendMessage(PNC + ChatColor.GREEN +  "Arenas :" + battleOfBlocks.Arenalist());
 						    		return true;
 						    	} else if(args[0].equalsIgnoreCase("saveall")){
+						    		sender.sendMessage(PNC + ChatColor.GREEN + "Saving... !");
 						    		try {
 										battleOfBlocks.reloadandremake();
 									} catch (IOException e) {
 										e.printStackTrace();
 									}
 						    		sender.sendMessage(PNC + ChatColor.GREEN + "Configuration saved !");
+						    		return true;
+						    	} else if(args[0].equalsIgnoreCase("reload")){
+						    		sender.sendMessage(PNC + ChatColor.GREEN + "Reloading... !");
+						        	battleOfBlocks.reload(sender);
+						    		return true;
+						    	} else if(args[0].equalsIgnoreCase("info")){
+						    		sender.sendMessage(PNC + ChatColor.YELLOW + "Plugin by gpotter2 ! Version: " + battleOfBlocks.getDescription().getVersion());
 						    		return true;
 						    	} else if(args[0].equalsIgnoreCase("update")){
 						    		battleOfBlocks.getLogger().info("Downloading the new version of BattleOfBlocks !");
@@ -496,12 +523,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 	  } else if(cmd.getName().equalsIgnoreCase("batofb")){
 			  if(sender instanceof Player){
 				  if(battleOfBlocks.hasPermission(sender, "battleofblocks.play") || battleOfBlocks.playbydefault){
-			    		try {
-			    			String test = args[0];
-						} catch (Exception e) {
-							sender.sendMessage(PNC + "Usage : /batofb leave");
+					  	if(args.length == 0){
+							sender.sendMessage(PNC + "Wrong usage ! Type /batofb help");
 							return true;
-						}
+					  	}
 							if(args[0].equalsIgnoreCase("leave")){
 							int deconowright = 0;
 							 for(int i = 0; i < battleOfBlocks.arenas.size(); i++){
@@ -518,6 +543,43 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 							 if(deconowright == 0){
 								 sender.sendMessage(PNC + ChatColor.RED +  "You are not in any Arena !");
 							 }
+							} else if(args[0].equalsIgnoreCase("join")){
+					    		if(args.length >= 2){
+					    			String name = args[1];
+					    			if(battleOfBlocks.Arenaexist(name)){
+					    				Arena ar = battleOfBlocks.getArena(name);
+					    				if(ar.locend == null){
+								    		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : ending point not set !");
+								    	} else if(ar.locstartred == null){ 
+								    		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : red's starting point not set !");
+								    	} else if(ar.locstartblue == null){
+								    		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : blue's starting point not set !");
+								    	} else if(ar.waitroom == null){
+								    		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : waiting point not set !");
+								    	} else if(ar.pmax < ar.startmin) { 
+								    		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : players max number is less than players minimum start !");
+								    	} else if(ar.isstarted) { 
+								    		sender.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_ALREADY_STARTED));
+								    	} else if(ar.getConnectedPlayers() >= ar.pmax){
+								    		sender.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_FULL));
+								    	} else if(((ar.vip + ar.getConnectedPlayers()) >= ar.pmax) && !(battleOfBlocks.hasPermission(sender, "battleofblocks.vip"))){
+								    		sender.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.BE_VIP));
+								    	} else {
+								    		battleOfBlocks.getArena(name).join((Player) sender);
+								    	}
+					    			} else {
+					    				sender.sendMessage(PNC + "The arena '" + name + "' doesn't exist !");
+						    			return true;
+					    			}
+					    		} else {
+					    			sender.sendMessage(PNC + "Wrong usage ! Type /batofb help");
+					    			return true;
+					    		}
+							} else if(args[0].equalsIgnoreCase("help")){
+								sender.sendMessage(PNC + ChatColor.GREEN + "Usages:");
+								sender.sendMessage(ChatColor.GREEN + "/batofb leave ==> (better to use /leave) Leave the arena");
+								sender.sendMessage(ChatColor.GREEN + "/batofb join <arena> ==> Join an arena");
+								return true;
 							} else if(args[0].equalsIgnoreCase("admin")){
 								if(battleOfBlocks.cheatadmin == false){
 									sender.sendMessage(PNC + ChatColor.RED +  "This command was disabled by the administrator !");
@@ -543,10 +605,12 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 										 sender.sendMessage(PNC + ChatColor.RED +  "You are not in any Arena !");
 									 }
 								 } else {
-									 sender.sendMessage(PNC + "Usage : /batofb leave");
+									 sender.sendMessage(PNC + "Wrong usage ! Type /batofb help");
+									 return true;
 								 }
 							} else {
-								  sender.sendMessage(PNC + "Usage : /batofb leave");
+								sender.sendMessage(PNC + "Wrong usage ! Type /batofb help");
+								return true;
 							}
 					  } else {
 						  sender.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
@@ -558,6 +622,13 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 	  }
 		    return false;
 	  }
+
+	public boolean test_more(int number, int more){
+		if(number <= more){
+			return false;
+		}
+		return true;
+	}
 
 	public void help(CommandSender sender, int page){
 		if(!(battleOfBlocks.hasPermission(sender, "battleofblocks.setup"))){
@@ -592,7 +663,9 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks tooglebreak <arena>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Enable or disable breaking in an arena (auto reset on finish)");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcontrolname <name>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the name of the instance");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcoinskills <number>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the server coins reward of any kills");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks info   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Get the plugin infos !");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks saveall   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Save all the arenas (The arenas are saved automatically during the server's stop)");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks reload   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Reload completly the plugin !");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks update   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Update the plugin !");
 		}
 		

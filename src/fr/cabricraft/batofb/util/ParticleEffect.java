@@ -511,13 +511,7 @@ public enum ParticleEffect {
 	 */
 	private static boolean isLongDistance(Location location, List<Player> players) {
 		for (Player player : players) {
-			Location location_verified;
-			if(location.getWorld().getName().equals(player.getWorld().getName())) location_verified = location;
-			else {
-				location_verified = location;
-				location_verified.setWorld(Bukkit.getWorld(player.getWorld().getUID()));
-			}
-			if (player.getLocation().distanceSquared(location_verified) < 65536) {
+			if (player.getLocation().distanceSquared(location) < 65536) {
 				continue;
 			}
 			return true;
@@ -1509,6 +1503,7 @@ public enum ParticleEffect {
 		 * @throws IllegalArgumentException If the range is lower than 1
 		 * @see #sendTo(Location center, Player player)
 		 */
+		
 		public void sendTo(Location center, double range) throws IllegalArgumentException {
 			if (range < 1) {
 				throw new IllegalArgumentException("The range is lower than 1");

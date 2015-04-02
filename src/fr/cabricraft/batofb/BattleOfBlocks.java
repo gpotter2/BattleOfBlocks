@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLClassLoader;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,13 +73,17 @@ import fr.cabricraft.batofb.powerups.LoadCustomAdd;
 import fr.cabricraft.batofb.powerups.Powerups;
 import fr.cabricraft.batofb.shop.Shop;
 import fr.cabricraft.batofb.signs.SignUtility;
+import fr.cabricraft.batofb.util.DatabasesHandler;
+import fr.cabricraft.batofb.util.DatabasesHandler.Condition;
+import fr.cabricraft.batofb.util.DatabasesHandler.DatabaseType;
+import fr.cabricraft.batofb.util.DatabasesHandler.ObjectType;
+import fr.cabricraft.batofb.util.DatabasesUtil.DataObject;
 import fr.cabricraft.batofb.util.Messages;
 
-/*
+/**
  * This plugin is a free minigame !
- * You may copy the code and create another plugin for yourself only, but you cannot distribute it !
  * 
- * Code writed by gpotter2
+ * @author gpotter2 
  * 
  */
 
@@ -112,10 +117,22 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   
   public boolean stop = false;
   
+  private boolean database_errors_notice = false;
   private boolean updatenotice = false;
   private String updatenoticemessage = null;
   public int update_id = 76657;
   public File batofb_file;
+  public DatabasesHandler data_handler;
+  public DatabaseType savehandler = null;
+  
+  public String database_name = "Minecraft";
+  
+  //Mysql
+  private String host = "localhost";
+  private String user = "username";
+  private String pass = "password";
+  private String port = "3306";
+  //
   
   public void onLoad() {}
   
@@ -123,8 +140,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	this.stop = true;
     try {
       saveall();
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
     for(Arena ar : arenas){
@@ -134,29 +150,10 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     }
   }
   
-  boolean setupEconomy() {
-	  if(ecoenabled) {
-	      RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-	      if (rsp == null) {
-	        return false;
-	      }
-	      this.econ = ((Economy) rsp.getProvider());
-      }
-      return true;
-  }
-  
-  boolean setupPermissions(){
-      RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
-      if (permissionProvider != null) {
-          permission = permissionProvider.getProvider();
-      }
-      return (permission != null);
-  }
-  
   public void onEnable()
   {
-    try
-    {
+    try {
+      long start_time = System.currentTimeMillis();
       this.stop = false;
       this.battleOfBlocks = this;
       this.batofb_file = getFile();
@@ -207,34 +204,62 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	      }
       }
       //
+      if(!new File(getDataFolder().getAbsolutePath() + "/saves/").exists()){
+		  new File(getDataFolder().getAbsolutePath() + "/saves/").mkdir();
+	  }
       //LOADING ARENAS
-      FileConfiguration config = conffile("saves/save.yml");
-      config.set("A", "#####NEVER MODIFY THIS FILE FROM HERE !#####");
-      config.save(getDataFolder() + "/saves/save.yml");
-      if (config.getConfigurationSection("Arenas") != null)
-      {
-        Set<String> keys = config.getConfigurationSection("Arenas").getKeys(false);
-        for (String key : keys) {
-          load(key);
-        }
+      if(savehandler == null){
+    	  FileConfiguration config = conffile("saves/save.yml");
+	      config.set("A", "#####NEVER MODIFY THIS FILE FROM HERE !#####");
+	      config.save(getDataFolder() + "/saves/save.yml");
+	      if (config.getConfigurationSection("Arenas") != null) {
+	        Set<String> keys = config.getConfigurationSection("Arenas").getKeys(false);
+	        for (String key : keys) {
+	        	load(key);
+	        }
+	      }
+      } else if(savehandler == DatabaseType.MYSQL){
+    	  data_handler = new DatabasesHandler(DatabaseType.MYSQL, "battleofblocks");
+    	  boolean initied = data_handler.init(host, user, pass, database_name, port, "id");
+    	  if(!initied){
+    		  database_errors_notice = true;
+    	  } else {
+    		  data_handler.addColumn("name", ObjectType.VARCHAR);
+    		  data_handler.addColumn("value", ObjectType.NONE);
+    		  data_handler.addColumn("arena", ObjectType.VARCHAR);
+    		  loadDatabase();
+    	  }
+      } else if(savehandler == DatabaseType.SQLITE){
+    	  data_handler = new DatabasesHandler(DatabaseType.SQLITE, "battleofblocks", getDataFolder().getAbsolutePath() + "/saves/save.db");
+    	  boolean initied = data_handler.init(null, null, null, database_name, null, "id");
+    	  if(!initied){
+    		  database_errors_notice = true;
+    	  } else {
+    		  data_handler.addColumn("name", ObjectType.VARCHAR);
+    		  data_handler.addColumn("value", ObjectType.NONE);
+    		  data_handler.addColumn("arena", ObjectType.VARCHAR);
+    		  loadDatabase();
+    	  }
       }
       //
-      //IMPLEMENTINGS SIGNS AND SHOP
-      this.pm.registerEvents(new SignUtility(battleOfBlocks), battleOfBlocks);
-      this.pm.registerEvents(shop, battleOfBlocks);
-      //
-      //IMPLEMENTINGS COMMANDS
-      getCommand("battleofblocks").setExecutor(new Commands(battleOfBlocks));
-      getCommand("batofb").setExecutor(new Commands(battleOfBlocks));
-      //
+      if(!database_errors_notice){
+	      //IMPLEMENTINGS SIGNS AND SHOP
+	      this.pm.registerEvents(new SignUtility(battleOfBlocks), battleOfBlocks);
+	      this.pm.registerEvents(shop, battleOfBlocks);
+	      //
+	      //IMPLEMENTINGS COMMANDS
+	      getCommand("battleofblocks").setExecutor(new Commands(battleOfBlocks));
+	      getCommand("batofb").setExecutor(new Commands(battleOfBlocks));
+	      //
+      }
       //RELOADING SIGNS
       SignUtility.updatesigns();
       //
       //LOADING DONE !!!
-      getLogger().info("BattleOfBlocks's arenas " + Arenalist() + " loaded !");
-    }
-    catch (IOException e) {
-      System.out.println("FATAL ERROR ON ENABLE !");
+      long final_time = System.currentTimeMillis() - start_time;
+      getLogger().info("BattleOfBlocks loaded ! Done in " + final_time + "ms !");
+    } catch (IOException e) {
+      getLogger().severe("FATAL ERROR ON ENABLING BATTLEOFBLOCKS !");
       e.printStackTrace();
     }
   }
@@ -270,25 +295,171 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     return config;
   }
   
-  public void reloadandremake()
-    throws IOException {
-    FileConfiguration config = conffile("saves/save.yml");
-    if (config == null) {
-      getLogger().severe("CONFIGURATION FILE = NULL ! (reloadandmake)");
-      return;
-    }
-    config.set("Arenas", null);
-    config.set("Signs", null);
-    config.save(getDataFolder() + "/saves/save.yml");
-    FileConfiguration config2 = getConfig();
-    config2.set("Configuration", null);
-    saveConfig();
-    saveall();
+  boolean setupEconomy() {
+	  if(ecoenabled) {
+	      RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+	      if (rsp == null) {
+	        return false;
+	      }
+	      this.econ = ((Economy) rsp.getProvider());
+      }
+      return true;
   }
   
-  public void save(Arena ar, String pos)
-    throws IOException
-  {
+  boolean setupPermissions(){
+      RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
+      if (permissionProvider != null) {
+          permission = permissionProvider.getProvider();
+      }
+      return (permission != null);
+  }
+  
+  public void reloadandremake() throws IOException {
+	  if(savehandler == null){
+	    FileConfiguration config = conffile("saves/save.yml");
+	    if (config == null) {
+	      getLogger().severe("CONFIGURATION FILE = NULL ! (reloadandmake)");
+	      return;
+	    }
+	    config.set("Arenas", null);
+	    config.save(getDataFolder() + "/saves/save.yml");
+	    FileConfiguration config2 = getConfig();
+	    config2.set("Configuration", null);
+	    saveConfig();
+	  } else {
+		 data_handler.clearTable();
+	  }
+	  saveall();
+  }
+  
+  public void loadDatabase(){
+	  	String[] arenas_temp = null;
+	  	List<Object> get = data_handler.getValues("value", new Condition("name", "infos"), new Condition("arena", "infos"));
+	  	if(get != null){
+	  		if(get.size() != 0){
+	  			String arena_string_get = (String) get.get(0);
+	  			if(arena_string_get != null){
+	  				if(!arena_string_get.equals("") && !arena_string_get.equals("null")){
+						arenas_temp = getArrayFromString(arena_string_get);
+						if(arenas_temp != null){
+							  if(arenas_temp.length != 0){
+								  for(int i = 0; i < arenas_temp.length; i++){
+									  String arena_name = arenas_temp[i];
+									  if(arena_name != null){
+										  if(!arena_name.equals("") && !arena_name.equals("null")){
+											  loadArenaDatabase(arena_name);
+										  }
+									  }
+								  }
+							  }
+						}
+	  				}
+	  			}
+	  		}
+	  	}
+  }
+  
+  public void loadArenaDatabase(String arena_name){
+	  	int lives;
+	    int startmin;
+	    int pmax;
+	    int vip;
+	    Location lwaitroom = null;
+	    Location lstartblue = null;
+	    Location lstartred = null;
+	    Location lend = null;
+	    Vector<Location> vred = new Vector<Location>();
+	    Vector<Location> vblue = new Vector<Location>();
+	    Vector<ItemStack> rewards = new Vector<ItemStack>();
+	    boolean canbuild = false;
+	    boolean canbreak = false;
+	    lives = Integer.parseInt((String) data_handler.getValues("value", new Condition("name", "lives"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    startmin = Integer.parseInt((String) data_handler.getValues("value", new Condition("name", "startmin"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    pmax = Integer.parseInt((String) data_handler.getValues("value", new Condition("name", "pmax"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    vip = Integer.parseInt((String) data_handler.getValues("value", new Condition("name", "vip"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    canbuild = Boolean.parseBoolean((String) data_handler.getValues("value", new Condition("name", "canbuild"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    canbreak = Boolean.parseBoolean((String) data_handler.getValues("value", new Condition("name", "canbreak"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    lwaitroom = str2loc((String) data_handler.getValues("value", new Condition("name", "lwaitroom"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    lstartblue = str2loc((String) data_handler.getValues("value", new Condition("name", "lstartblue"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    lstartred = str2loc((String) data_handler.getValues("value", new Condition("name", "lstartred"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    lend = str2loc((String) data_handler.getValues("value", new Condition("name", "lend"), new Condition("arena", "arena_" + arena_name)).get(0));
+	    
+	    List<Object> red_blocks_get = data_handler.getValues("value", new Condition("name", "red_blocks"), new Condition("arena", "arena_" + arena_name));
+	    if(red_blocks_get != null){
+	    	if(red_blocks_get.size() != 0){
+				String[] red_blocks = getArrayFromString((String) red_blocks_get.get(0));
+				for (String value : red_blocks) {
+			    	Location l = str2loc(value);
+			      	vred.addElement(l);
+			    }
+	    	}
+	    }
+	    List<Object> blue_blocks_get = data_handler.getValues("value", new Condition("name", "blue_blocks"), new Condition("arena", "arena_" + arena_name));
+	    if(blue_blocks_get != null){
+	    	if(blue_blocks_get.size() != 0){
+				String[] blue_blocks = getArrayFromString((String) blue_blocks_get.get(0));
+				for (String value : blue_blocks) {
+			    	Location l = str2loc(value);
+			      	vblue.addElement(l);
+			    }
+	    	}
+	    }
+	    List<Object> reward_items_get = data_handler.getValues("value", new Condition("name", "reward_items"), new Condition("arena", "arena_" + arena_name));
+	    if(reward_items_get != null){
+	    	if(reward_items_get.size() != 0){
+		    	String[] reward_items = getArrayFromString((String) reward_items_get.get(0));
+			    for (String value : reward_items) {
+			    	ItemStack is = str2item(value);
+			      	rewards.addElement(is);
+			    }
+	    	}
+	    }
+	    Arena ar = new Arena(arena_name, this.battleOfBlocks, lstartred, lstartblue, lend, lwaitroom, vred, vblue, lives, pmax, startmin, onwin, facteurkills, vip, rewards, canbuild, canbreak);
+	    Powerups up = new Powerups(ar);
+	    this.arenas.addElement(ar);
+	    this.pm.registerEvents(ar, this.battleOfBlocks);
+	    this.pm.registerEvents(up, this.battleOfBlocks);
+  }
+  
+  public void saveValueArenaDatabase(String arena_name, String name_value, Object data){
+	  	DataObject[] da = new DataObject[3];
+	  	da[0] = new DataObject("arena", arena_name);
+	  	da[1] = new DataObject("name", name_value);
+	  	da[2] = new DataObject("value", data + "");
+	  	data_handler.InsertOrUpdateValue(da, new Condition("arena", arena_name), new Condition("name", name_value));
+  }
+  
+  public void saveArenaDatabase(Arena ar) throws IOException {
+	  	String arena_name = "arena_" + ar.getName();
+	  	saveValueArenaDatabase(arena_name, "lives", ar.life);
+	  	saveValueArenaDatabase(arena_name, "startmin", ar.startmin);
+	  	saveValueArenaDatabase(arena_name, "pmax", ar.pmax);
+	  	saveValueArenaDatabase(arena_name, "vip", ar.vip);
+	  	saveValueArenaDatabase(arena_name, "canbuild", ar.canbuild);
+	  	saveValueArenaDatabase(arena_name, "canbreak", ar.canbreak);
+	  	saveValueArenaDatabase(arena_name, "lwaitroom", loc2str(ar.waitroom));
+	  	saveValueArenaDatabase(arena_name, "lstartblue", loc2str(ar.locstartblue));
+	  	saveValueArenaDatabase(arena_name, "lstartred", loc2str(ar.locstartblue));
+	  	saveValueArenaDatabase(arena_name, "lend", loc2str(ar.locend));
+	    List<String> red_blocks = new LinkedList<String>();
+	    for (int i = 0; i < ar.vred.size(); i++) {
+	    	red_blocks.add(loc2str(ar.vred.elementAt(i)));
+	    }
+		saveValueArenaDatabase(arena_name, "red_blocks", getStringFromArray(red_blocks.toArray(new String[red_blocks.size()])));
+	    List<String> blue_blocks = new LinkedList<String>();
+	    for (int i = 0; i < ar.vblue.size(); i++) {
+	    	blue_blocks.add(loc2str(ar.vblue.elementAt(i)));
+	    }
+		saveValueArenaDatabase(arena_name, "blue_blocks", getStringFromArray(blue_blocks.toArray(new String[blue_blocks.size()])));
+	    List<String> rewards_items = new LinkedList<String>();
+	    for (ItemStack is : ar.reward) {
+	    	rewards_items.add(item2str(is));
+	    }
+		saveValueArenaDatabase(arena_name, "rewards_items", getStringFromArray(rewards_items.toArray(new String[rewards_items.size()])));
+	  }
+  
+  public void save(Arena ar) throws IOException {
+	String pos = "Arenas." + ar.getName();
     FileConfiguration config = conffile("saves/save.yml");
     if (config == null) {
       getLogger().severe("CONFIGURATION FILE = NULL ! (save)");
@@ -384,22 +555,49 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     config.save(getDataFolder() + "/saves/save.yml");
   }
   
+  public String getStringFromArray(String[] array){
+	  String retur = null;
+	  for(String value : array){
+		  if(retur == null) retur = value;
+		  else retur = retur + "#@#" + value;
+	  }
+	  return retur;
+  }
+  
+  public String[] getArrayFromString(String str){
+	  return str.split("#@#");
+  }
+  
   public void saveall()
     throws IOException
   {
     addInf();
     savesigns();
-    for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena)this.arenas.elementAt(i);
-      String get = ar.getName();
-      try
-      {
-        save(ar, "Arenas." + get);
-      }
-      catch (IOException e)
-      {
-        e.printStackTrace();
-      }
+    if(savehandler == null){
+	    for (int i = 0; i < this.arenas.size(); i++) {
+	      Arena ar = (Arena) this.arenas.elementAt(i);
+	      try {
+	        save(ar);
+	      } catch (IOException e) {
+	        e.printStackTrace();
+	      }
+	    }
+    } else {
+    	List<String> arenas = new LinkedList<String>();
+    	for (int i = 0; i < this.arenas.size(); i++) {
+	  	      Arena ar = (Arena) this.arenas.elementAt(i);
+	  	      try {
+	  	        saveArenaDatabase(ar);
+	  	      } catch (IOException e) {
+	  	        e.printStackTrace();
+	  	      }
+	  	      arenas.add(ar.getName());
+  	    }
+    	List<DataObject> da = new LinkedList<DataObject>();
+	  	da.add(new DataObject("arena", "infos"));
+	  	da.add(new DataObject("name", "infos"));
+		da.add(new DataObject("value", getStringFromArray(arenas.toArray(new String[arenas.size()]))));
+	  	data_handler.InsertOrUpdateValue(da.toArray(new DataObject[da.size()]), new Condition("arena", "infos"), new Condition("name", "infos"));
     }
     getLogger().info("BattleOfBlocks's configuration writed !");
   }
@@ -435,10 +633,14 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] To download it, just type: '/battleofblocks update' !");
 		  }
 	  }
+	  if(database_errors_notice){
+		  if(event.getPlayer().hasPermission("battleofblocks.setup")){
+			  event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] BattleOfBlocks couldn't use the databases ! The plugin is inactive !");
+		  }
+	  }
   }
   
-  public void load(String namearena)
-  {
+  public void load(String namearena) {
     String pos = "Arenas." + namearena;
     
     FileConfiguration config = conffile("saves/save.yml");
@@ -578,6 +780,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("A", "#####READ ME !#####");
     conf.set("B", "#####YOU CANNOT EDIT THIS FILE WHEN THE SERVER IS RUNNING !#####");
     conf.set("C", "#####YOU HAVE TO STOP IT, MODIFY THIS FILE, AND RESTART IT !#####");
+    if(savehandler == null){
+    	conf.set("Configuration.SaveHandler", "yaml");
+    } else {
+    	conf.set("Configuration.SaveHandler", savehandler.toString());
+    }
     conf.set("Configuration.Defaultlifes", Integer.valueOf(defaultlives));
     conf.set("Configuration.Defaultstart", Integer.valueOf(defaultstart));
     conf.set("Configuration.Defaultmax", Integer.valueOf(defaultmax));
@@ -591,6 +798,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("Configuration.ControlName", controlname);
     conf.set("Configuration.CheckUpdate", Boolean.valueOf(check_update));
     conf.set("Configuration.RespawnTimeInSecs", Integer.valueOf(respawnTime));
+    conf.set("Configuration.Database.DatabaseName", database_name);
+    conf.set("Configuration.Database.MySQL.host", host);
+    conf.set("Configuration.Database.MySQL.user", user);
+    conf.set("Configuration.Database.MySQL.pass", pass);
+    conf.set("Configuration.Database.MySQL.port", port);
     saveConfig();
   }
   
@@ -618,6 +830,20 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     FileConfiguration conf = getConfig();
     if (conf.getConfigurationSection("Configuration") != null) {
       ConfigurationSection cs = conf.getConfigurationSection("Configuration");
+      if (cs.isSet("SaveHandler")) {
+    	  String get_save_handler = cs.getString("SaveHandler");
+    	  if(get_save_handler.equalsIgnoreCase("sqlite")){
+    		  savehandler = DatabasesHandler.DatabaseType.SQLITE;
+    	  } else if(get_save_handler.equalsIgnoreCase("mysql")){
+    		  savehandler = DatabasesHandler.DatabaseType.MYSQL;
+    	  } else if(get_save_handler.equalsIgnoreCase("yaml")){
+    		  savehandler = null;
+    	  } else {
+    		  getLogger().info(get_save_handler + " is not a valide saveHandler type ! (yaml/sqlite/mysql)");
+    		  getLogger().info("Using Yaml !");
+    		  savehandler = null;
+    	  }
+      }
       if (cs.isSet("Defaultlifes")) {
         defaultlives = cs.getInt("Defaultlifes");
       }
@@ -663,7 +889,24 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       if (cs.isSet("RespawnTimeInSecs")) {
     	  respawnTime = cs.getInt("RespawnTimeInSecs");
       }
-      
+      if(cs.isSet("Database.DatabaseName")){
+    	  database_name = cs.getString("Database.DatabaseName");
+      }
+      ConfigurationSection cs2 = cs.getConfigurationSection("Database.MySQL");
+      if(cs2 != null){
+	      if (cs2.isSet("host")) {
+	    	  host = cs2.getString("host");
+	      }
+	      if (cs2.isSet("user")) {
+	    	  user = cs2.getString("user");
+	      }
+	      if (cs2.isSet("pass")) {
+	    	  pass = cs2.getString("pass");
+	      }
+	      if (cs2.isSet("port")) {
+	    	  port = cs2.getString("port");
+	      }
+      }
       getLogger().info("Plugin configuration loaded !");
     }
   }
@@ -754,96 +997,140 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	final Plugin plugin = this;
 	    	final CommandSender sender = s;
 	    	
-	    	new BukkitRunnable() {
-				@Override
-				public void run() {
-			        PluginManager pluginManager = Bukkit.getPluginManager();
-			        SimpleCommandMap commandMap = null;
-			        List<Plugin> plugins = null;
-			        Map<String, Plugin> names = null;
-			        Map<String, Command> commands = null;
-			        Map<Event, SortedSet<RegisteredListener>> listeners = null;
-			        boolean reloadlisteners = true;
-			        if (pluginManager != null) {
-			            try {
-			                Field pluginsField = Bukkit.getPluginManager().getClass().getDeclaredField("plugins");
-			                pluginsField.setAccessible(true);
-			                plugins = (List<Plugin>) pluginsField.get(pluginManager);
-			                Field lookupNamesField = Bukkit.getPluginManager().getClass().getDeclaredField("lookupNames");
-			                lookupNamesField.setAccessible(true);
-			                names = (Map<String, Plugin>) lookupNamesField.get(pluginManager);
-			                try {
-			                    Field listenersField = Bukkit.getPluginManager().getClass().getDeclaredField("listeners");
-			                    listenersField.setAccessible(true);
-			                    listeners = (Map<Event, SortedSet<RegisteredListener>>) listenersField.get(pluginManager);
-			                } catch (Exception e) {
-			                    reloadlisteners = false;
-			                }
-			                Field commandMapField = Bukkit.getPluginManager().getClass().getDeclaredField("commandMap");
-			                commandMapField.setAccessible(true);
-			                commandMap = (SimpleCommandMap) commandMapField.get(pluginManager);
-			                Field knownCommandsField = SimpleCommandMap.class.getDeclaredField("knownCommands");
-			                knownCommandsField.setAccessible(true);
-			                commands = (Map<String, Command>) knownCommandsField.get(commandMap);
-			            } catch (NoSuchFieldException e) {
-			                e.printStackTrace();
-			                return;
-			            } catch (IllegalAccessException e) {
-			                e.printStackTrace();
-			                return;
-			            }
-			        }
-			        pluginManager.disablePlugin(plugin);
-			        if (plugins != null && plugins.contains(plugin))
-			            plugins.remove(plugin);
-			        if (names != null && names.containsKey(plugin))
-			            names.remove(plugin);
-			        if (listeners != null && reloadlisteners) {
-			            for (SortedSet<RegisteredListener> set : listeners.values()) {
-			                for (Iterator<RegisteredListener> it = set.iterator(); it.hasNext(); ) {
-			                    RegisteredListener value = it.next();
-			                    if (value.getPlugin() == plugin) {
-			                        it.remove();
-			                    }
-			                }
-			            }
-			        }
-			        if (commandMap != null) {
-			            for (Iterator<Map.Entry<String, Command>> it = commands.entrySet().iterator(); it.hasNext(); ) {
-			                Map.Entry<String, Command> entry = it.next();
-			                if (entry.getValue() instanceof PluginCommand) {
-			                    PluginCommand c = (PluginCommand) entry.getValue();
-			                    if (c.getPlugin() == plugin) {
-			                        c.unregister(commandMap);
-			                        it.remove();
-			                    }
-			                }
-			            }
-			        }
-			        ClassLoader cl = plugin.getClass().getClassLoader();
-			        if (cl instanceof URLClassLoader) {
-			            try {
-			                ((URLClassLoader) cl).close();
-			            } catch (IOException ex) {
-			                Logger.getLogger(BattleOfBlocks.class.getName()).log(Level.SEVERE, null, ex);
-			            }
-			        }
-			        System.gc();
-			        Plugin target = null;
-			        try {
-			            target = Bukkit.getPluginManager().loadPlugin(getFile());
-			        } catch (InvalidDescriptionException e) {
-			            e.printStackTrace();
-			            return;
-			        } catch (InvalidPluginException e) {
-			            e.printStackTrace();
-			            return;
-			        }
-			        target.onLoad();
-			        Bukkit.getPluginManager().enablePlugin(target);
-			        sender.sendMessage(ChatColor.RED + "[BattleOfBlocks]" + ChatColor.GREEN + " Plugin sucessfuly reloaded !");
-				}
-			}.runTaskLater(this, 10);
-  }
-  
+	    	try {
+		    	new BukkitRunnable() {
+					@Override
+					public void run() {
+						try {
+							long start_time = System.currentTimeMillis();
+					        PluginManager pluginManager = Bukkit.getPluginManager();
+					        SimpleCommandMap commandMap = null;
+					        List<Plugin> plugins = null;
+					        Map<String, Plugin> names = null;
+					        Map<String, Command> commands = null;
+					        Map<Event, SortedSet<RegisteredListener>> listeners = null;
+					        boolean reloadlisteners = true;
+					        plugin.onDisable();
+					        if (pluginManager != null) {
+					            try {
+					                Field pluginsField = Bukkit.getPluginManager().getClass().getDeclaredField("plugins");
+					                pluginsField.setAccessible(true);
+					                plugins = (List<Plugin>) pluginsField.get(pluginManager);
+					                Field lookupNamesField = Bukkit.getPluginManager().getClass().getDeclaredField("lookupNames");
+					                lookupNamesField.setAccessible(true);
+					                names = (Map<String, Plugin>) lookupNamesField.get(pluginManager);
+					                try {
+					                    Field listenersField = Bukkit.getPluginManager().getClass().getDeclaredField("listeners");
+					                    listenersField.setAccessible(true);
+					                    listeners = (Map<Event, SortedSet<RegisteredListener>>) listenersField.get(pluginManager);
+					                } catch (Exception e) {
+					                    reloadlisteners = false;
+					                }
+					                Field commandMapField = Bukkit.getPluginManager().getClass().getDeclaredField("commandMap");
+					                commandMapField.setAccessible(true);
+					                commandMap = (SimpleCommandMap) commandMapField.get(pluginManager);
+					                Field knownCommandsField = SimpleCommandMap.class.getDeclaredField("knownCommands");
+					                knownCommandsField.setAccessible(true);
+					                commands = (Map<String, Command>) knownCommandsField.get(commandMap);
+					            } catch (NoSuchFieldException e) {
+					                e.printStackTrace();
+					                return;
+					            } catch (IllegalAccessException e) {
+					                e.printStackTrace();
+					                return;
+					            }
+					        }
+					        pluginManager.disablePlugin(plugin);
+					        if (plugins != null && plugins.contains(plugin))
+					            plugins.remove(plugin);
+					        if (names != null && names.containsKey(plugin))
+					            names.remove(plugin);
+					        if (listeners != null && reloadlisteners) {
+					            for (SortedSet<RegisteredListener> set : listeners.values()) {
+					                for (Iterator<RegisteredListener> it = set.iterator(); it.hasNext(); ) {
+					                    RegisteredListener value = it.next();
+					                    if (value.getPlugin() == plugin) {
+					                        it.remove();
+					                    }
+					                }
+					            }
+					        }
+					        if (commandMap != null) {
+					            for (Iterator<Map.Entry<String, Command>> it = commands.entrySet().iterator(); it.hasNext(); ) {
+					                Map.Entry<String, Command> entry = it.next();
+					                if (entry.getValue() instanceof PluginCommand) {
+					                    PluginCommand c = (PluginCommand) entry.getValue();
+					                    if (c.getPlugin() == plugin) {
+					                        c.unregister(commandMap);
+					                        it.remove();
+					                    }
+					                }
+					            }
+					        }
+					        ClassLoader cl = plugin.getClass().getClassLoader();
+					        if (cl instanceof URLClassLoader) {
+					            try {
+					                ((URLClassLoader) cl).close();
+					            } catch (IOException ex) {
+					                Logger.getLogger(BattleOfBlocks.class.getName()).log(Level.SEVERE, null, ex);
+					            }
+					        }
+					        System.gc();
+					        Plugin target = null;
+					        try {
+					            target = Bukkit.getPluginManager().loadPlugin(getFile());
+					        } catch (InvalidDescriptionException e) {
+					            e.printStackTrace();
+					            return;
+					        } catch (InvalidPluginException e) {
+					            e.printStackTrace();
+					            return;
+					        }
+					        target.onLoad();
+					        Bukkit.getPluginManager().enablePlugin(target);
+					        long final_time = System.currentTimeMillis() - start_time;
+					        sender.sendMessage(ChatColor.RED + "[BattleOfBlocks]" + ChatColor.GREEN + " Plugin sucessfuly reloaded ! (Done in " + final_time + "ms)");
+						} catch(Exception e){
+			        		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Couldn't reload the plugin");
+			        	}
+					}
+				}.runTaskLater(this, 10);
+		    } catch(Exception e){
+		    	sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Couldn't reload the plugin");
+		    }
+	    }
+	    public Location str2loc(String str){
+	    	if(str != null){
+		        String str2loc[]=str.split("\\:");
+		        Location loc = new Location(getServer().getWorld(str2loc[0]),0,0,0);
+		        loc.setX(Double.parseDouble(str2loc[1]));
+		        loc.setY(Double.parseDouble(str2loc[2]));
+		        loc.setZ(Double.parseDouble(str2loc[3]));
+		        loc.setYaw(Float.parseFloat(str2loc[4]));
+		        loc.setPitch(Float.parseFloat(str2loc[5]));
+		        return loc;
+	    	}
+	    	return null;
+	    }
+	    public String loc2str(Location loc){
+	    	if(loc != null){
+	    		return loc.getWorld().getName()+":"+loc.getBlockX()+":"+loc.getBlockY()+":"+loc.getBlockZ()+":"+loc.getYaw()+":"+loc.getPitch();
+	    	}
+	    	return null;
+	    }
+	    @SuppressWarnings("deprecation")
+		public ItemStack str2item(String str){
+	    	if(str != null){
+		    	String str2item[]=str.split("\\:");
+		        return new ItemStack(Material.valueOf(str2item[0]), Integer.valueOf(str2item[1]), (short) 0, Byte.parseByte(str2item[2]));
+	    	}
+	    	return null;
+	    }
+	    @SuppressWarnings("deprecation")
+		public String item2str(ItemStack i){
+	    	if(i != null){
+	    		return i.getType().toString()+":"+i.getAmount()+":"+i.getData().getData();
+	    	}
+	    	return null;
+	    }
 }

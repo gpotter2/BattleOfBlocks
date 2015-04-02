@@ -141,8 +141,7 @@ public class Arena
   
   public HashMap<UUID, String> p_kits = new HashMap<UUID, String>();
   
-  public Arena(String arenaname, BattleOfBlocks plug, Location locstartred, Location locstartblue, Location locend, Location waitroom, Vector<Location> vred, Vector<Location> vblue, int life, int pmax, int pmin, int onwin, int facteurkills, int vip, Vector<ItemStack> reward, boolean canbuild, boolean canbreak)
-  {
+  public Arena(String arenaname, BattleOfBlocks plug, Location locstartred, Location locstartblue, Location locend, Location waitroom, Vector<Location> vred, Vector<Location> vblue, int life, int pmax, int pmin, int onwin, int facteurkills, int vip, Vector<ItemStack> reward, boolean canbuild, boolean canbreak) {
     this.arenaname = arenaname;
     this.battleOfBlocks = plug;
     this.vblue = vblue;
@@ -163,6 +162,25 @@ public class Arena
     this.canbuild = canbuild;
     this.canbreak = canbreak;
     this.reset = Bukkit.getScoreboardManager().getNewScoreboard();
+    checkBlocks();
+  }
+  
+  @SuppressWarnings("deprecation")
+public void checkBlocks(){
+	  for(Location l : vblue){
+		  Block b = l.getBlock();
+		  if(b.getType() != Material.WOOL){
+			  b.setType(Material.WOOL);
+			  b.setData(DyeColor.BLUE.getData());
+		  }
+	  }
+	  for(Location l : vred){
+		  Block b = l.getBlock();
+		  if(b.getType() != Material.WOOL){
+			  b.setType(Material.WOOL);
+			  b.setData(DyeColor.RED.getData());
+		  }
+	  }
   }
   
   public String PNC(){
@@ -1347,6 +1365,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
       if ((redlife <= 0) || (bluelife <= 0)) {
         event.setCancelled(true);
       } else {
+    	  if(event.getBlock().getType() == Material.WOOL){
 		        for (int i = 0; i < vblue.size(); i++) {
 		          Location l = (Location)vblue.elementAt(i);
 		          Location l2 = event.getBlock().getLocation();
@@ -1412,6 +1431,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
 				       }
 				    }
 	      }
+      }
     }
     if(canbreak){
     	if(isinGame(event.getPlayer())){

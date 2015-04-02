@@ -55,7 +55,7 @@ public void run() {
     
     Block latestlocgolem = golem.getLocation().getBlock().getRelative(BlockFace.DOWN);
     
-    while (continueok) {
+    while (continueok && arena.isstarted) {
     	Block heregolem = golem.getLocation().getBlock().getRelative(BlockFace.DOWN);
 		if(latestlocgolem == heregolem){
 			removegolem();
