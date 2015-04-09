@@ -150,12 +150,22 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     }
   }
   
-  public void onEnable()
-  {
+  public void onEnable() {
     try {
       long start_time = System.currentTimeMillis();
       this.stop = false;
       this.battleOfBlocks = this;
+      if(!compilationSuccess()){
+    	  getLogger().severe("Disabling the plugin !!!");
+    	  new BukkitRunnable() {
+    		Plugin plugin = battleOfBlocks;
+			@Override
+			public void run() {
+				getPluginLoader().disablePlugin(plugin);
+			}
+		}.runTaskLater(this, 10L);
+    	  return;
+      }
       this.batofb_file = getFile();
       
       //LOADING...
@@ -171,9 +181,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       if (this.check_update) {
 	        Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
 	        if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
-	        	getLogger().info("A new version of the plugin is available !");
 	        	updatenotice = true;
 	        	updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
+	        	getLogger().info("A new version of the plugin is available: " + updatenoticemessage + " !");
 	        }
       }
       
@@ -1133,4 +1143,56 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	}
 	    	return null;
 	    }
+	    
+	    public boolean compilationSuccess(){
+	    	getLogger().info("Checking valuability of the file...");
+	    	String base = "fr.cabricraft.batofb.";
+			try {
+				Class.forName(base + "Metrics");
+				Class.forName(base + "Updater");
+				Class.forName(base + "arenas.Arena");
+				Class.forName(base + "arenas.ArenaChrono");
+				Class.forName(base + "command.Commands");
+				Class.forName(base + "economy.EconomyManager");
+				Class.forName(base + "kits.BasicKits");
+				Class.forName(base + "kits.ItemsKit");
+				Class.forName(base + "kits.Kit");
+				Class.forName(base + "kits.Kits");
+				Class.forName(base + "kits.KitsLoader");
+				Class.forName(base + "powerups.CustomAdd");
+				Class.forName(base + "powerups.CustomAddPower");
+				Class.forName(base + "powerups.LoadCustomAdd");
+				Class.forName(base + "powerups.Powerups");
+				Class.forName(base + "powerups.PowerupsChrono");
+				Class.forName(base + "shop.Shop");
+				Class.forName(base + "signs.SignUtility");
+				Class.forName(base + "util.BlockSave");
+				Class.forName(base + "util.ClassTaker");
+				Class.forName(base + "util.DatabasesHandler");
+				Class.forName(base + "util.DatabasesUtil");
+				Class.forName(base + "util.IronGolemChorno");
+				Class.forName(base + "util.IronGolemControl");
+				Class.forName(base + "util.Messages");
+				Class.forName(base + "util.ParticleEffect");
+				Class.forName(base + "util.ParticleLauncher");
+				Class.forName(base + "util.ReflectionUtils");
+				Class.forName(base + "util.ToogleInventory");
+				getLogger().info("This file was successfuly compiled !");
+				return true;
+			} catch(NoClassDefFoundError e){
+				getLogger().severe("######################################################");
+				getLogger().severe("######################################################");
+				getLogger().severe("The class '" + e.getMessage() + "' wasn't compiled !!!");
+				getLogger().severe("######################################################");
+				getLogger().severe("######################################################");
+				return false;
+			} catch(ClassNotFoundException e){
+				getLogger().severe("######################################################");
+				getLogger().severe("######################################################");
+				getLogger().severe("The class '" + e.getMessage() + "' wasn't compiled !!!");
+				getLogger().severe("######################################################");
+				getLogger().severe("######################################################");
+				return false;
+			}
+		}
 }

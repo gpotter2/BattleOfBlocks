@@ -1362,8 +1362,10 @@ public void onSelectTeam(BlockPlaceEvent event) {
         }
       }
     } else {
-      if ((redlife <= 0) || (bluelife <= 0)) {
-        event.setCancelled(true);
+      if(!isstarted || iswaiting){
+    	  event.setCancelled(true);
+      } else if ((redlife <= 0) || (bluelife <= 0)) {
+    	  event.setCancelled(true);
       } else {
     	  if(event.getBlock().getType() == Material.WOOL){
 		        for (int i = 0; i < vblue.size(); i++) {
