@@ -47,6 +47,9 @@ public class SignUtility implements Listener {
 	public static void updatesigns(){
 		  List<Location> s_to_remove = new LinkedList<Location>();
 	      for(Location ls : battleOfBlocks.s){
+	    	  if(!ls.getBlock().getChunk().isLoaded()){
+	    		  ls.getBlock().getChunk().load();
+	    	  }
 	    	  if(ls.getBlock().getType() == Material.WALL_SIGN || ls.getBlock().getType() == Material.SIGN || ls.getBlock().getType() == Material.SIGN_POST) {
 	    		  Sign s = (Sign) ls.getBlock().getState();
 	    		  String arena_name = s.getLine(3);
@@ -56,7 +59,7 @@ public class SignUtility implements Listener {
 				      s.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
 				      s.setLine(2, ar.getConnectedPlayers() + "/" + ar.pmax);
 				      if(ar.getConnectedPlayers() >= ar.pmax) {
-					  s.setLine(1, ChatColor.BLUE + "[Full]");
+				    	  s.setLine(1, ChatColor.BLUE + "[Full]");
 				      } else if(ar.isstarted == false && (ar.vip + ar.getConnectedPlayers()) >= ar.pmax){
 						  s.setLine(1, ChatColor.LIGHT_PURPLE + "[VIP]");
 					  } else if(ar.isstarted) {
@@ -96,7 +99,7 @@ public class SignUtility implements Listener {
 					  } else if(ar.isstarted) {
 						  event.setLine(1, ChatColor.RED + "[Busy]");
 					  }
-					battleOfBlocks.s.addElement(event.getBlock().getLocation());
+					battleOfBlocks.s.add(event.getBlock().getLocation());
 		    	} else {
 					event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] This arena doesn't exist !");
 					event.setLine(1, ChatColor.RED + "ArenaName");
@@ -154,6 +157,8 @@ public class SignUtility implements Listener {
 							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : blue's starting point not set !");
 							    	} else if(ar.waitroom == null){
 							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : waiting point not set !");
+							    	} else if(ar.vblue.isEmpty() || ar.vred.isEmpty()){
+							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : must be at the minimum 1 block for each team !");
 							    	} else if(ar.pmax < ar.startmin) { 
 							    		event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Cannot join the game : players max number is less than players minimum start !");
 							    	} else if(ar.isstarted) { 

@@ -77,7 +77,7 @@ public class ParticleLauncher {
 		  return hitted;
 	  }
 	
-	private List<Entity>  getNearbyEntities(Location l, int radius){
+	private List<Entity> getNearbyEntities(Location l, int radius){
         int chunkRadius = radius < 16 ? 1 : (radius - (radius % 16))/16;
         List<Entity> radiusEntities = new LinkedList<Entity>();
             for (int chX = 0 -chunkRadius; chX <= chunkRadius; chX ++){
@@ -91,6 +91,17 @@ public class ParticleLauncher {
         return radiusEntities;
     }
 	
+	
+	/**
+	 * Get all the locations between 2 locations.
+	 * 
+	 * This is a code that was REALY hard to make, so please if you use it, leave my name :D
+	 * 
+	 * @param loc1 The first location
+	 * @param loc2 The second location
+	 * @author gpotter2
+	 * @return The list of all the locations between the 2 locations
+	 */
 	private List<Location> l_straight(Location loc1, Location loc2){
 		  World w = loc1.getWorld();
 		  List<Location> l = new LinkedList<Location>();
@@ -139,7 +150,7 @@ public class ParticleLauncher {
 	  }
 
 	private boolean randomBoolean(){
-		int al = 1 + (int)(Math.random() * ((2 - 1) + 1));
+		int al = 1 + (int)(Math.random() * 2);
 		if(al > 1.5){
 			return true;
 		}

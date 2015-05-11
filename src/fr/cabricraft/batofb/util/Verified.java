@@ -16,37 +16,14 @@
  * 
  */
 
-package fr.cabricraft.batofb.kits;
+package fr.cabricraft.batofb.util;
 
-import java.util.List;
-
-import org.bukkit.Material;
-
-import fr.cabricraft.batofb.util.Verified;
-
-public class Kit implements Verified {
-	//REQUIRED
-	public List<ItemsKit> v;
-	public String name;
-	public String des;
-	public Material m;
-	//OPTIONAL
-	public String perm;
-	public int priceToBuy;
+public interface Verified {
 	
-	Kit(List<ItemsKit> v, String name, String des, Material m, String perm, int priceToBuy){
-		this.v = v;
-		this.name = name;
-		this.des = des;
-		this.m = m;
-		this.perm = perm;
-		this.priceToBuy = priceToBuy;
-	}
-
-	public boolean isCorrect() {
-		if(v != null && name != null && des != null && m != null){
-			return true;
-		}
-		return false;
-	}
+	/**
+	 * Test if the object is correct
+	 * 
+	 * @return If the object is correct
+	 */
+	public abstract boolean isCorrect();
 }

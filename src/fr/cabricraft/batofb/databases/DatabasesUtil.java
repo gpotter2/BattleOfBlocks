@@ -16,7 +16,7 @@
  * 
  */
 
-package fr.cabricraft.batofb.util;
+package fr.cabricraft.batofb.databases;
 
 import java.net.ConnectException;
 import java.sql.Connection;

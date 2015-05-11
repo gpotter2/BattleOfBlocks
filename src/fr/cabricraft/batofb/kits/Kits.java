@@ -18,12 +18,14 @@
 
 package fr.cabricraft.batofb.kits;
 
-import java.util.Vector;
+import java.util.LinkedList;
+import java.util.List;
+
 
 public class Kits {
-	public Vector<Kit> v = new Vector<Kit>();
+	public List<Kit> v = new LinkedList<Kit>();
 	
-	Kits(Vector<Kit> v){
+	Kits(List<Kit> v){
 		this.v = v;
 	}
 }

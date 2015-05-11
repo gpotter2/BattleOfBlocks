@@ -15,6 +15,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import fr.cabricraft.batofb.util.ReflectionUtils;
 import fr.cabricraft.batofb.util.ReflectionUtils.PackageType;
 
 /**

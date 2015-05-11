@@ -18,8 +18,9 @@
 
 package fr.cabricraft.batofb.kits;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
-import java.util.Vector;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -41,7 +42,7 @@ public class KitsLoader {
 		try {
 			if(config.getConfigurationSection("Kits") != null){
 		      Set<String> keys = config.getConfigurationSection("Kits").getKeys(false);
-		      Vector<Kit> v_kits = new Vector<Kit>();
+		      List<Kit> v_kits = new LinkedList<Kit>();
 		      for (String key : keys) {
 			        ConfigurationSection cs1 = config.getConfigurationSection("Kits." + key);
 			        String kit_name = key;
@@ -52,7 +53,7 @@ public class KitsLoader {
 			        priceToBuy = cs1.getInt("PriceToBuy");
 			        Material logo = Material.getMaterial(cs1.getInt("LogoID"));
 			        Set<String> keys2 = config.getConfigurationSection("Kits." + key + ".Items").getKeys(false);
-			        Vector<ItemsKit> v = new Vector<ItemsKit>();
+			        List<ItemsKit> v = new LinkedList<ItemsKit>();
 				    for (String key2 : keys2) {
 					        ConfigurationSection cs = config.getConfigurationSection("Kits." + key + ".Items." + key2);
 					        String name = key2;
@@ -66,14 +67,14 @@ public class KitsLoader {
 						        im.setDisplayName(name);
 						        is.setItemMeta(im);
 						        ItemsKit ik = new ItemsKit(is);
-						        v.addElement(ik);
+						        v.add(ik);
 					        }
 				    }
 				    if(v.isEmpty() || kit_des == null || logo == null){
-				    	battleOfBlocks.getLogger().severe("Error while loading the kit " + kit_name);
+				    	battleOfBlocks.getLogger().severe("Error while loading the kit '" + kit_name + "': must have one item or more, a description and a logoID !");
 				    } else {
 					    Kit k = new Kit(v, kit_name,kit_des, logo, kit_perm, priceToBuy);
-					    v_kits.addElement(k);
+					    v_kits.add(k);
 				    }
 		      }
 		      Kits ks = new Kits(v_kits);

@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,9 +62,16 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import com.earth2me.essentials.Essentials;
+
 import fr.cabricraft.batofb.Updater.UpdateResult;
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.command.Commands;
+import fr.cabricraft.batofb.databases.DatabasesHandler;
+import fr.cabricraft.batofb.databases.DatabasesHandler.Condition;
+import fr.cabricraft.batofb.databases.DatabasesHandler.DatabaseType;
+import fr.cabricraft.batofb.databases.DatabasesHandler.ObjectType;
+import fr.cabricraft.batofb.databases.DatabasesUtil.DataObject;
 import fr.cabricraft.batofb.kits.Kits;
 import fr.cabricraft.batofb.kits.KitsLoader;
 import fr.cabricraft.batofb.powerups.CustomAdd;
@@ -73,11 +79,6 @@ import fr.cabricraft.batofb.powerups.LoadCustomAdd;
 import fr.cabricraft.batofb.powerups.Powerups;
 import fr.cabricraft.batofb.shop.Shop;
 import fr.cabricraft.batofb.signs.SignUtility;
-import fr.cabricraft.batofb.util.DatabasesHandler;
-import fr.cabricraft.batofb.util.DatabasesHandler.Condition;
-import fr.cabricraft.batofb.util.DatabasesHandler.DatabaseType;
-import fr.cabricraft.batofb.util.DatabasesHandler.ObjectType;
-import fr.cabricraft.batofb.util.DatabasesUtil.DataObject;
 import fr.cabricraft.batofb.util.Messages;
 
 /**
@@ -88,17 +89,18 @@ import fr.cabricraft.batofb.util.Messages;
  */
 
 public class BattleOfBlocks extends JavaPlugin implements Listener {
-  public Vector<Arena> arenas = new Vector<Arena>();
+  public List<Arena> arenas = new LinkedList<Arena>();
   BattleOfBlocks battleOfBlocks;
   PluginManager pm;
   int defaultstart = 3;
   int defaultlives = 10;
   int defaultmax = 20;
   int defaultvip = 1;
-  public Vector<Location> s = new Vector<Location>();
+  public List<Location> s = new LinkedList<Location>();
   public boolean barapienabled;
   public boolean vaultenabled_permissions = false;
   public boolean vaultenabled_economy = false;
+  public boolean essentials_enabled = false;
   public static int time = 30;
   public int onwin = 100;
   public int facteurkills = 10;
@@ -106,14 +108,18 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public boolean check_update = true;
   public Economy econ = null;
   public Permission permission = null;
+  public Essentials essentials = null;
   public Messages msg;
   public CustomAdd ca = new CustomAdd();
   public String controlname = "BattleOfBlocks";
   public boolean ecoenabled = true;
   public Kits kits = null;
-  public int respawnTime = 0;
+  public int respawnTime = 3;
   public Shop shop;
+  
   public boolean playbydefault = true;
+  public boolean opadmin = true;
+  public boolean canjoinwhithcommand = true;
   
   public boolean stop = false;
   
@@ -178,13 +184,14 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       loadsigns();
       //
       shop = new Shop(battleOfBlocks);
-      if (this.check_update) {
-	        Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
-	        if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
-	        	updatenotice = true;
-	        	updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
-	        	getLogger().info("A new version of the plugin is available: " + updatenoticemessage + " !");
-	        }
+      if(check_update){
+    	  checkUpdate();
+    	  new BukkitRunnable() {
+			@Override
+			public void run() {
+				checkUpdate();
+			}
+		}.runTaskTimerAsynchronously(this, 0, 432000);
       }
       
       try {
@@ -199,9 +206,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       this.pm.registerEvents(this, this.battleOfBlocks);
       //DETECTING PLUGINS
       if (pm.getPlugin("BarAPI") != null) {
-        barapienabled = true;
-        getLogger().info("Using BARApi !");
-      } else barapienabled = false;
+    	  barapienabled = true;
+    	  getLogger().info("Using BARApi !");
+      }
       
       if(pm.getPlugin("Vault") != null){
 	      if (setupEconomy()) {
@@ -212,6 +219,12 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	  vaultenabled_permissions = true;
 	    	  getLogger().info("Using Vault -Permissions!");
 	      }
+      }
+      
+      if (pm.getPlugin("Essentials") != null) {
+    	  essentials_enabled = true;
+    	  essentials = (Essentials) getPlugin(com.earth2me.essentials.Essentials.class);
+    	  getLogger().info("Hooked Essentials !");
       }
       //
       if(!new File(getDataFolder().getAbsolutePath() + "/saves/").exists()){
@@ -342,6 +355,17 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	  saveall();
   }
   
+  public void checkUpdate(){
+	  if (this.check_update) {
+		  Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
+	      if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
+	      	updatenotice = true;
+	      	updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
+	      	getLogger().info("A new version of the plugin is available: " + updatenoticemessage + " !");
+	      }
+	  }
+  }
+  
   public void loadDatabase(){
 	  	String[] arenas_temp = null;
 	  	List<Object> get = data_handler.getValues("value", new Condition("name", "infos"), new Condition("arena", "infos"));
@@ -378,9 +402,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    Location lstartblue = null;
 	    Location lstartred = null;
 	    Location lend = null;
-	    Vector<Location> vred = new Vector<Location>();
-	    Vector<Location> vblue = new Vector<Location>();
-	    Vector<ItemStack> rewards = new Vector<ItemStack>();
+	    List<Location> vred = new LinkedList<Location>();
+	    List<Location> vblue = new LinkedList<Location>();
+	    List<ItemStack> rewards = new LinkedList<ItemStack>();
 	    boolean canbuild = false;
 	    boolean canbreak = false;
 	    lives = Integer.parseInt((String) data_handler.getValues("value", new Condition("name", "lives"), new Condition("arena", "arena_" + arena_name)).get(0));
@@ -400,7 +424,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				String[] red_blocks = getArrayFromString((String) red_blocks_get.get(0));
 				for (String value : red_blocks) {
 			    	Location l = str2loc(value);
-			      	vred.addElement(l);
+			      	vred.add(l);
 			    }
 	    	}
 	    }
@@ -410,7 +434,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				String[] blue_blocks = getArrayFromString((String) blue_blocks_get.get(0));
 				for (String value : blue_blocks) {
 			    	Location l = str2loc(value);
-			      	vblue.addElement(l);
+			      	vblue.add(l);
 			    }
 	    	}
 	    }
@@ -420,13 +444,13 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 		    	String[] reward_items = getArrayFromString((String) reward_items_get.get(0));
 			    for (String value : reward_items) {
 			    	ItemStack is = str2item(value);
-			      	rewards.addElement(is);
+			      	rewards.add(is);
 			    }
 	    	}
 	    }
 	    Arena ar = new Arena(arena_name, this.battleOfBlocks, lstartred, lstartblue, lend, lwaitroom, vred, vblue, lives, pmax, startmin, onwin, facteurkills, vip, rewards, canbuild, canbreak);
 	    Powerups up = new Powerups(ar);
-	    this.arenas.addElement(ar);
+	    this.arenas.add(ar);
 	    this.pm.registerEvents(ar, this.battleOfBlocks);
 	    this.pm.registerEvents(up, this.battleOfBlocks);
   }
@@ -453,12 +477,12 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	  	saveValueArenaDatabase(arena_name, "lend", loc2str(ar.locend));
 	    List<String> red_blocks = new LinkedList<String>();
 	    for (int i = 0; i < ar.vred.size(); i++) {
-	    	red_blocks.add(loc2str(ar.vred.elementAt(i)));
+	    	red_blocks.add(loc2str(ar.vred.get(i)));
 	    }
 		saveValueArenaDatabase(arena_name, "red_blocks", getStringFromArray(red_blocks.toArray(new String[red_blocks.size()])));
 	    List<String> blue_blocks = new LinkedList<String>();
 	    for (int i = 0; i < ar.vblue.size(); i++) {
-	    	blue_blocks.add(loc2str(ar.vblue.elementAt(i)));
+	    	blue_blocks.add(loc2str(ar.vblue.get(i)));
 	    }
 		saveValueArenaDatabase(arena_name, "blue_blocks", getStringFromArray(blue_blocks.toArray(new String[blue_blocks.size()])));
 	    List<String> rewards_items = new LinkedList<String>();
@@ -533,7 +557,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       }
     }
     for (int i = 0; i < ar.vblue.size(); i++) {
-      Location l = (Location) ar.vblue.elementAt(i);
+      Location l = (Location) ar.vblue.get(i);
       if(l.getWorld() != null) {
 	      String node = pos + "." + "Save.Blue." + l.getWorld().getName() + "_" + l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
 	      config.set(node + ".location.world", l.getWorld().getName());
@@ -545,7 +569,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       }
     }
     for (int i = 0; i < ar.vred.size(); i++) {
-      Location l = (Location)ar.vred.elementAt(i);
+      Location l = (Location)ar.vred.get(i);
       if(l.getWorld() != null) {
 	      String node = pos + "." + "Save.Red." + l.getWorld().getName() + "_" + l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
 	      config.set(node + ".location.world", l.getWorld().getName());
@@ -585,7 +609,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     savesigns();
     if(savehandler == null){
 	    for (int i = 0; i < this.arenas.size(); i++) {
-	      Arena ar = (Arena) this.arenas.elementAt(i);
+	      Arena ar = (Arena) this.arenas.get(i);
 	      try {
 	        save(ar);
 	      } catch (IOException e) {
@@ -595,7 +619,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     } else {
     	List<String> arenas = new LinkedList<String>();
     	for (int i = 0; i < this.arenas.size(); i++) {
-	  	      Arena ar = (Arena) this.arenas.elementAt(i);
+	  	      Arena ar = (Arena) this.arenas.get(i);
 	  	      try {
 	  	        saveArenaDatabase(ar);
 	  	      } catch (IOException e) {
@@ -629,7 +653,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
         Double z = Double.valueOf(cs.getDouble("location.z"));
         
         Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue());
-        s.addElement(l);
+        s.add(l);
       }
     }
   }
@@ -637,14 +661,14 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   @EventHandler
   public void join(PlayerJoinEvent event){
 	  if(updatenotice){
-		  if(event.getPlayer().hasPermission("battleofblocks.setup")){
+		  if(hasPermission(event.getPlayer(), "battleofblocks.setup")){
 			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] A new great update of the plugin is available !");
 			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] Your version: " + ChatColor.RED + "v" + getDescription().getVersion() + ChatColor.GREEN + ". New version: " + ChatColor.GOLD + updatenoticemessage + ChatColor.GREEN + " !");
 			  event.getPlayer().sendMessage(ChatColor.GREEN + "[BattleOfBlocks] To download it, just type: '/battleofblocks update' !");
 		  }
 	  }
 	  if(database_errors_notice){
-		  if(event.getPlayer().hasPermission("battleofblocks.setup")){
+		  if(hasPermission(event.getPlayer(), "battleofblocks.setup")){
 			  event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] BattleOfBlocks couldn't use the databases ! The plugin is inactive !");
 		  }
 	  }
@@ -662,9 +686,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     Location lstartblue = null;
     Location lstartred = null;
     Location lend = null;
-    Vector<Location> vred = new Vector<Location>();
-    Vector<Location> vblue = new Vector<Location>();
-    Vector<ItemStack> rewards = new Vector<ItemStack>();
+    List<Location> vred = new LinkedList<Location>();
+    List<Location> vblue = new LinkedList<Location>();
+    List<ItemStack> rewards = new LinkedList<ItemStack>();
     boolean canbuild = false;
     boolean canbreak = false;
     if (config.getConfigurationSection(pos + "." + "GameConfig") != null) {
@@ -743,7 +767,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
         Float pitch = Float.valueOf(cs.getInt("location.pitch"));
         
         Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue(), yaw, pitch);
-        vred.addElement(l);
+        vred.add(l);
       }
     }
     if (config.getConfigurationSection(pos + "." + "Save.Blue") != null) {
@@ -762,7 +786,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
         Float pitch = Float.valueOf(cs.getInt("location.pitch"));
         
         Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue(), yaw, pitch);
-        vblue.addElement(l);
+        vblue.add(l);
       }
     }
     if (config.getConfigurationSection(pos + "." + "RewardsItems") != null) {
@@ -772,12 +796,12 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
         ConfigurationSection cs = config.getConfigurationSection(pos + "." + "RewardsItems." + key);
         Material m = Material.getMaterial(cs.getString("Material"));
         int amount = cs.getInt("Amount");
-        rewards.addElement(new ItemStack(m, amount));
+        rewards.add(new ItemStack(m, amount));
       }
     }
     Arena ar = new Arena(namearena, this.battleOfBlocks, lstartred, lstartblue, lend, lwaitroom, vred, vblue, lives, pmax, startmin, onwin, facteurkills, vip, rewards, canbuild, canbreak);
     Powerups up = new Powerups(ar);
-    this.arenas.addElement(ar);
+    this.arenas.add(ar);
     this.pm.registerEvents(ar, this.battleOfBlocks);
     this.pm.registerEvents(up, this.battleOfBlocks);
   }
@@ -803,6 +827,8 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("Configuration.DefaultCoinsOnWin", Integer.valueOf(onwin));
     conf.set("Configuration.Timebeforestart", Integer.valueOf(time));
     conf.set("Configuration.PlayByDefault", Boolean.valueOf(playbydefault));
+    conf.set("Configuration.OpAdmin", Boolean.valueOf(opadmin));
+    conf.set("Configuration.CanJoinWithCommand", Boolean.valueOf(canjoinwhithcommand));
     conf.set("Configuration.CheatAdmin", Boolean.valueOf(cheatadmin));
     conf.set("Configuration.EconomyEnabled", Boolean.valueOf(ecoenabled));
     conf.set("Configuration.ControlName", controlname);
@@ -820,7 +846,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	FileConfiguration conf = conffile("saves/signs.yml");
     conf.set("Signs", null);
     for (int i = 0; i < s.size(); i++) {
-      Location l = s.elementAt(i);
+      Location l = s.get(i);
       if(l.getBlock().getType() == Material.WALL_SIGN || l.getBlock().getType() == Material.SIGN || l.getBlock().getType() == Material.SIGN_POST) {
 	      String node = "Signs." + l.getWorld().getName() + "_" + l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
 	      conf.set(node + ".location.world", l.getWorld().getName());
@@ -879,7 +905,13 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     	  respawnTime = cs.getInt("RespawnTimeInSecs");
       }
       if (cs.isSet("PlayByDefault")) {
-        playbydefault = cs.getBoolean("PlayByDefault");
+    	  playbydefault = cs.getBoolean("PlayByDefault");
+      }
+      if (cs.isSet("OpAdmin")) {
+          	opadmin = cs.getBoolean("OpAdmin");
+      }
+      if (cs.isSet("CanJoinWithCommand")) {
+    	  canjoinwhithcommand = cs.getBoolean("CanJoinWithCommand");
       }
       if (cs.isSet("ControlName")) {
     	  String temp = cs.getString("ControlName");
@@ -923,9 +955,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   
   public Arena getArena(String nomarene) {
     for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena) this.arenas.elementAt(i);
+      Arena ar = (Arena) this.arenas.get(i);
       if (ar.getName().equals(nomarene)) {
-        return (Arena) this.arenas.elementAt(i);
+        return (Arena) this.arenas.get(i);
       }
     }
     return null;
@@ -950,7 +982,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public boolean Arenaexist(String nomarene)
   {
     for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena)this.arenas.elementAt(i);
+      Arena ar = (Arena)this.arenas.get(i);
       if (ar.getName().equals(nomarene)) {
         return true;
       }
@@ -959,9 +991,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   }
   
   public void addarena(String arenaname) {
-    Arena ar = new Arena(arenaname, this.battleOfBlocks, null, null, null, null, new Vector<Location>(), new Vector<Location>(), this.defaultlives, this.defaultmax, this.defaultstart, this.onwin, this.facteurkills, this.defaultvip, new Vector<ItemStack>(), false, false);
+    Arena ar = new Arena(arenaname, this.battleOfBlocks, null, null, null, null, new LinkedList<Location>(), new LinkedList<Location>(), this.defaultlives, this.defaultmax, this.defaultstart, this.onwin, this.facteurkills, this.defaultvip, new LinkedList<ItemStack>(), false, false);
     Powerups up = new Powerups(ar);
-    this.arenas.addElement(ar);
+    this.arenas.add(ar);
     this.pm.registerEvents(ar, this.battleOfBlocks);
     this.pm.registerEvents(up, this.battleOfBlocks);
   }
@@ -969,9 +1001,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public void removearena(String arenaname)
   {
     for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena)this.arenas.elementAt(i);
+      Arena ar = (Arena)this.arenas.get(i);
       if (ar.getName().equals(arenaname)) {
-        this.arenas.removeElementAt(i);
+        this.arenas.remove(i);
       }
     }
   }
@@ -979,7 +1011,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public String Arenalist() {
     String reponse = "";
     for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena)this.arenas.elementAt(i);
+      Arena ar = (Arena)this.arenas.get(i);
       if (reponse == "") {
         reponse = reponse + ar.getName();
       } else {
@@ -992,12 +1024,29 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public boolean hasPermission(Permissible p, String permission){
 	  if(p instanceof Player){
 		  Player player = (Player) p;
+		  if(opadmin){
+			  if(player.isOp()){
+				  return true;
+			  }
+		  }
 		  if(vaultenabled_permissions){
+			  if(battleOfBlocks.permission.has(player, "*")) return true;
+			  if(permission.startsWith("battleofblocks.")){
+				  if(battleOfBlocks.permission.has(player, "battleofblocks.*")) return true;
+			  }
 			  return battleOfBlocks.permission.has(player, permission);
 		  } else {
-			  return p.hasPermission(permission);
+			  if(player.hasPermission("*")) return true;
+			  if(permission.startsWith("battleofblocks.")){
+				  if(p.hasPermission("battleofblocks.*")) return true;
+			  }
+			  return player.hasPermission(permission);
 		  }
 	  } else {
+		  if(p.hasPermission("*")) return true;
+		  if(permission.startsWith("battleofblocks.")){
+			  if(p.hasPermission("battleofblocks.*")) return true;
+		  }
 		  return p.hasPermission(permission);
 	  }
   	}
@@ -1153,6 +1202,8 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "arenas.Arena");
 				Class.forName(base + "arenas.ArenaChrono");
 				Class.forName(base + "command.Commands");
+				Class.forName(base + "databases.DatabasesHandler");
+				Class.forName(base + "databases.DatabasesUtil");
 				Class.forName(base + "economy.EconomyManager");
 				Class.forName(base + "kits.BasicKits");
 				Class.forName(base + "kits.ItemsKit");
@@ -1168,15 +1219,14 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "signs.SignUtility");
 				Class.forName(base + "util.BlockSave");
 				Class.forName(base + "util.ClassTaker");
-				Class.forName(base + "util.DatabasesHandler");
-				Class.forName(base + "util.DatabasesUtil");
 				Class.forName(base + "util.IronGolemChorno");
 				Class.forName(base + "util.IronGolemControl");
 				Class.forName(base + "util.Messages");
 				Class.forName(base + "util.ParticleEffect");
 				Class.forName(base + "util.ParticleLauncher");
 				Class.forName(base + "util.ReflectionUtils");
-				Class.forName(base + "util.ToogleInventory");
+				Class.forName(base + "util.Verified");
+				
 				getLogger().info("This file was successfuly compiled !");
 				return true;
 			} catch(NoClassDefFoundError e){

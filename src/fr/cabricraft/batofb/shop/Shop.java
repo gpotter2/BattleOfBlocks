@@ -20,7 +20,6 @@ package fr.cabricraft.batofb.shop;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Vector;
 
 import net.milkbowl.vault.economy.EconomyResponse;
 
@@ -95,7 +94,7 @@ public class Shop implements Listener {
 			l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_BOUGHT).replaceAll(PNC, ""));
 		} else {
 			String permission;
-			if(perm == "none"){
+			if(perm == "none" || perm == null){
 				permission = null;
 			} else {
 				permission = perm;
@@ -248,9 +247,9 @@ public class Shop implements Listener {
 		inv.addItem(getISKit(Material.BOOK_AND_QUILL, "Troll", "TROLOLOLOL!", 600, p, null));
 		inv.addItem(getISKit(Material.TNT, "Fury", "Im not happy with you!!!", 500, p, null));
 		if(battleOfBlocks.kits != null){
-			Vector<Kit> v = battleOfBlocks.kits.v;
+			List<Kit> v = battleOfBlocks.kits.v;
 			for(int i = 0; i < v.size(); i++){
-				Kit k = v.elementAt(i);
+				Kit k = v.get(i);
 				inv.addItem(getISKit(k.m, k.name, k.des, k.priceToBuy, p, k.perm));
 			}
 		}
@@ -380,20 +379,26 @@ public class Shop implements Listener {
 								if(hasBoughtPerk(p, name)){
 									p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_BOUGHT));
 								} else {
-									for(int i = 0; i < battleOfBlocks.kits.v.size(); i++){
-										Kit k = battleOfBlocks.kits.v.elementAt(i);
-										if(k.name.equalsIgnoreCase(name)){
-											if(battleOfBlocks.hasPermission(p, k.perm)){
-												if(canpay(p, k.priceToBuy)) {
-													buyKit(p, k.name, k.priceToBuy);
-													inv = 1;
-												} else {
-													p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
+									if(battleOfBlocks.kits != null){
+										if(battleOfBlocks.kits.v != null){
+											for(int i = 0; i < battleOfBlocks.kits.v.size(); i++){
+												Kit k = battleOfBlocks.kits.v.get(i);
+												if(k.isCorrect()){
+													if(k.name.equalsIgnoreCase(name)){
+														if(battleOfBlocks.hasPermission(p, k.perm)){
+															if(canpay(p, k.priceToBuy)) {
+																buyKit(p, k.name, k.priceToBuy);
+																inv = 1;
+															} else {
+																p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
+															}
+														} else {
+															p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
+														}
+														break;
+													}
 												}
-											} else {
-												p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
 											}
-											break;
 										}
 									}
 								}

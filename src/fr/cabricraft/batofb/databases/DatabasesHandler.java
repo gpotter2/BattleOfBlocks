@@ -16,7 +16,7 @@
  * 
  */
 
-package fr.cabricraft.batofb.util;
+package fr.cabricraft.batofb.databases;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,9 +28,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import fr.cabricraft.batofb.util.DatabasesUtil.DataObject;
-import fr.cabricraft.batofb.util.DatabasesUtil.MySQL;
-import fr.cabricraft.batofb.util.DatabasesUtil.SQLite;
+import fr.cabricraft.batofb.databases.DatabasesUtil.DataObject;
+import fr.cabricraft.batofb.databases.DatabasesUtil.MySQL;
+import fr.cabricraft.batofb.databases.DatabasesUtil.SQLite;
 
 /**
  * 

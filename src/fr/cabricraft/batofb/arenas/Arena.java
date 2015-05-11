@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
-import java.util.Vector;
 
 import me.confuser.barapi.BarAPI;
 
@@ -32,8 +31,11 @@ import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
+import org.bukkit.Instrument;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Note;
+import org.bukkit.Note.Tone;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.Dispenser;
@@ -84,12 +86,14 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.metadata.Metadatable;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
+import org.bukkit.util.Vector;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
 import fr.cabricraft.batofb.economy.EconomyManager;
@@ -99,13 +103,12 @@ import fr.cabricraft.batofb.kits.Kit;
 import fr.cabricraft.batofb.signs.SignUtility;
 import fr.cabricraft.batofb.util.BlockSave;
 import fr.cabricraft.batofb.util.ParticleEffect;
-import fr.cabricraft.batofb.util.ToogleInventory;
+import fr.cabricraft.batofb.util.Verified;
 
 public class Arena
-  implements Listener
-{
-  public Vector<Location> vblue;
-  public Vector<Location> vred;
+  implements Listener, Verified {
+  public List<Location> vblue;
+  public List<Location> vred;
   public List<Player> playersingame = new LinkedList<Player>();
   private int detection;
   public int redlife;
@@ -118,7 +121,7 @@ public class Arena
   public int pmax;
   public int vip;
   public int startmin;
-  public Vector<ItemStack> reward;
+  public List<ItemStack> reward;
   private Player temp;
   private String arenaname;
   public boolean isstarted = false;
@@ -132,16 +135,19 @@ public class Arena
   public boolean canbuild = false;
   public boolean canbreak = false;
   
-  private HashMap<UUID, Integer> moneys = new HashMap<UUID, Integer>();
-  private HashMap<UUID, Integer> kills_p = new HashMap<UUID, Integer>();
-  private HashMap<UUID, Integer> team_l = new HashMap<UUID, Integer>();
-  private HashMap<UUID, String> counter_l = new HashMap<UUID, String>();
+  private HashMap<UUID, Integer> player_list_money = new HashMap<UUID, Integer>();
+  private HashMap<UUID, Integer> player_list_kills = new HashMap<UUID, Integer>();
+  private HashMap<UUID, Integer> player_list_team = new HashMap<UUID, Integer>();
+  private HashMap<UUID, String> player_list_counter = new HashMap<UUID, String>();
+  private HashMap<UUID, String> player_list_names = new HashMap<UUID, String>();
+  private HashMap<UUID, Boolean> player_list_dead = new HashMap<UUID, Boolean>();
+  private HashMap<UUID, Inventory> player_list_inv_storage = new HashMap<UUID, Inventory>();
   
   private Scoreboard reset;
   
   public HashMap<UUID, String> p_kits = new HashMap<UUID, String>();
   
-  public Arena(String arenaname, BattleOfBlocks plug, Location locstartred, Location locstartblue, Location locend, Location waitroom, Vector<Location> vred, Vector<Location> vblue, int life, int pmax, int pmin, int onwin, int facteurkills, int vip, Vector<ItemStack> reward, boolean canbuild, boolean canbreak) {
+  public Arena(String arenaname, BattleOfBlocks plug, Location locstartred, Location locstartblue, Location locend, Location waitroom, List<Location> vred, List<Location> vblue, int life, int pmax, int pmin, int onwin, int facteurkills, int vip, List<ItemStack> reward, boolean canbuild, boolean canbreak) {
     this.arenaname = arenaname;
     this.battleOfBlocks = plug;
     this.vblue = vblue;
@@ -166,7 +172,7 @@ public class Arena
   }
   
   @SuppressWarnings("deprecation")
-public void checkBlocks(){
+private void checkBlocks(){
 	  for(Location l : vblue){
 		  Block b = l.getBlock();
 		  if(b.getType() != Material.WOOL){
@@ -200,36 +206,42 @@ public void checkBlocks(){
     return arenaname;
   }
   
-  public boolean isinGame(Player player)
-  {
-    for (int i = 0; i < playersingame.size(); i++) {
-      CommandSender p = (CommandSender)playersingame.get(i);
-      if (player == p) {
-        return true;
+  public String getStatus(){
+	  if(getConnectedPlayers() >= pmax) {
+    	  return ChatColor.RED + "[Full]";
+      } else if(isstarted == false && (vip + getConnectedPlayers()) >= pmax){
+    	  return ChatColor.LIGHT_PURPLE + "[VIP]";
+	  } else if(isstarted) {
+		  return ChatColor.RED + "[Busy]";
+	  } else {
+		  return ChatColor.GREEN + "[Join]";
+	  }
+  }
+  
+  public boolean isinGame(Player player) {
+    for (Player p : playersingame) {
+      if (player.getUniqueId().equals(p.getUniqueId())) {
+    	  return true;
       }
     }
     return false;
   }
   
-  public void setInventoryPlayerString(Player p)
-  {
-    Inventory invp = ToogleInventory.StringToInventory(p, battleOfBlocks);
-    p.getInventory().setContents(invp.getContents());
+  public void restoreInventory(Player p){
+    	p.getInventory().setContents(player_list_inv_storage.get(p.getUniqueId()).getContents());
   }
   
-  public void setInvtoryString(Player p)
-  {
-    String invstring = ToogleInventory.InventoryToString(p.getInventory(), p);
-    setMetadata(p, "inv", invstring, battleOfBlocks);
+  public void saveInventory(Player p){
+	  	player_list_inv_storage.put(p.getUniqueId(), p.getInventory());
   }
   
   public int getteam(LivingEntity p){
-	  int team = team_l.containsKey(p.getUniqueId()) ? team_l.get(p.getUniqueId()) : 0;
+	  int team = player_list_team.containsKey(p.getUniqueId()) ? player_list_team.get(p.getUniqueId()) : 0;
 	  return team;
   }
   
-  Player hPlayerGame(int team){
-	  Vector<Player> p_list_temp = new Vector<Player>();
+  private Player hPlayerGame(int team){
+	  List<Player> p_list_temp = new LinkedList<Player>();
 	  for(Player p_temp : playersingame){
 		  if(getteam(p_temp) == team){
 			  p_list_temp.add(p_temp);
@@ -267,7 +279,7 @@ public void checkBlocks(){
 	  return nbr;
   }
   
-  public void checkteam(){
+  private void checkteam(){
 	  if(nbrblue() < ((int) (getConnectedPlayers()/2))){
 		  while(nbrblue() < ((int) (getConnectedPlayers()/2))){
 			  Player p = hPlayerGame(2);
@@ -283,13 +295,50 @@ public void checkBlocks(){
 	  }
   }
   
-  public void teleportall(int act, int option) {
-    if (act == 1) {
-      for (int i = 0; i < playersingame.size(); i++)
-      {
+  private void teleportStart(){
+		for (int i = 0; i < playersingame.size(); i++){
+		      Player pp = (Player)playersingame.get(i);
+		      if (getteam(pp) == 0) {
+		    	  chooseteamh(pp);
+		      }
+	    }
+	    checkteam();
+	    settalkbarre();
+	    canchangeweather = false;
+	    locstartred.getWorld().setPVP(true);
+	    locstartred.getWorld().setTime(0L);
+	    locstartred.getWorld().setStorm(false);
+	    locstartred.getWorld().setThundering(false);
+	    canchangeweather = true;
+	    canteleport = true;
+	    for (int i = 0; i < playersingame.size(); i++){
+		      Player pp = (Player)playersingame.get(i);
+		      player_list_names.put(pp.getUniqueId(), pp.getPlayerListName());
+		      int t = getteam(pp);
+		      player_list_kills.put(pp.getUniqueId(), 0);
+		      if (t == 1) {
+		    	  	pp.teleport(locstartblue);
+		        	if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.BLUE + pp.getName());
+		        	pp.setCustomNameVisible(true);
+		      } else if (t == 2) {
+		    	  	pp.teleport(locstartred);
+		    	  	if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.RED + pp.getName());
+		    	  	pp.setCustomNameVisible(true);
+		      }
+		      clearInventory(pp);
+		      settunic(pp, false);
+		      InstaureCountDown(pp, setStuff(pp));
+	    }
+	    isstarted = true;
+	    iswaiting = false;
+	    canteleport = false;
+	    SignUtility.updatesigns();
+  }
+  
+  private void teleportEnd(int winner){
+      for (int i = 0; i < playersingame.size(); i++) {
         Player pp = (Player) playersingame.get(i);
         pp.teleport(locend);
-        pp.setDisplayName((String) getMetadata(pp, "CN", battleOfBlocks));
         removeCountDownAndPotions(pp);
         clearInventory(pp);
         resetScoreboard(pp);
@@ -301,63 +350,20 @@ public void checkBlocks(){
     			battleOfBlocks.barapienabled = false;
     		}
         }
-        setInventoryPlayerString(pp);
-        if(getteam(pp) == option) {
+        restoreInventory(pp);
+        removeLastEssentialsLocation(pp);
+        if(getteam(pp) == winner) {
 	        for (int i2 = 0; i2 < reward.size(); i2++) {
-	          ItemStack isr = (ItemStack) reward.elementAt(i2);
+	          ItemStack isr = (ItemStack) reward.get(i2);
 	          if (isr != null) {
 	            pp.getInventory().addItem(isr);
 	          }
 	        }
         }
       }
-    }
-    else if (act == 2) {
-		for (int i = 0; i < playersingame.size(); i++)
-	    {
-	      Player pp = (Player)playersingame.get(i);
-	      if (getteam(pp) == 0) {
-	        chooseteamh(pp);
-	      }
-	    }
-      checkteam();
-      settalkbarre();
-      canchangeweather = false;
-      locstartred.getWorld().setPVP(true);
-      locstartred.getWorld().setTime(0L);
-      locstartred.getWorld().setStorm(false);
-      locstartred.getWorld().setThundering(false);
-      canchangeweather = true;
-      canteleport = true;
-      for (int i = 0; i < playersingame.size(); i++)
-      {
-        Player pp = (Player)playersingame.get(i);
-        setMetadata(pp, "CN", pp.getDisplayName(), battleOfBlocks);
-        setMetadata(pp, "PLN", pp.getPlayerListName(), battleOfBlocks);
-        int t = getteam(pp);
-        setMetadata(pp, "kills", Integer.valueOf(0), battleOfBlocks);
-        if (t == 1) {
-          pp.teleport(locstartblue);
-          if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.BLUE + pp.getName());
-          pp.setCustomNameVisible(true);
-        } else if (t == 2) {
-          pp.teleport(locstartred);
-          if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.RED + pp.getName());
-          pp.setCustomNameVisible(true);
-        }
-        clearInventory(pp);
-        settunic(pp, false);
-        InstaureCountDown(pp, setStuff(pp));
-      }
-      isstarted = true;
-      iswaiting = false;
-      canteleport = false;
-      SignUtility.updatesigns();
-    }
   }
   
-  public void setdetection(int i)
-  {
+  public void setdetection(int i) {
     detection = i;
   }
   
@@ -382,7 +388,7 @@ public void checkBlocks(){
   }
   
   @SuppressWarnings("deprecation")
-public void setScoreBoard(Player p) {
+private void setScoreBoard(Player p) {
 	  Scoreboard board;
 	  Objective objective;
 	  Objective objective_lifes;
@@ -408,6 +414,9 @@ public void setScoreBoard(Player p) {
 public void updateScoreboard(Player p) {
 	  Scoreboard scb = p.getScoreboard();
 	  Objective obj = scb.getObjective("kills");
+	  if(obj == null){
+		  obj = scb.registerNewObjective("kills", "dummy");
+	  }
 	  if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 	  obj.setDisplayName(ChatColor.BLUE + "" + ChatColor.MAGIC + "bob" + ChatColor.RESET + battleOfBlocks.controlname + ChatColor.RED + "" + ChatColor.MAGIC + "bob");
 	  Score score = obj.getScore(Bukkit.getOfflinePlayer(ChatColor.GREEN + "Kills:"));
@@ -432,34 +441,32 @@ public void updateScoreboard(Player p) {
 	  p.setScoreboard(scb); 
   }
   
-  public void resetScoreboard(Player p) {
-	  p.setPlayerListName((String) getMetadata(p, "PLN", battleOfBlocks));
+  private void resetScoreboard(Player p) {
+	  p.setPlayerListName(player_list_names.get(p.getUniqueId()));
 	  p.setScoreboard(reset);
   }
   
-  public void resetScoreboard() {
+  private void resetScoreboard() {
 	  ScoreboardManager manager = Bukkit.getScoreboardManager();
 	  for(Player p : playersingame){
-		  p.setPlayerListName((String) getMetadata(p, "PLN", battleOfBlocks));
+		  p.setPlayerListName(player_list_names.get(p.getUniqueId()));
 		  p.setScoreboard(manager.getNewScoreboard());
 	  }
   }
   
-  public void setend(Location loc)
-  {
+  public void setend(Location loc) {
     locend = loc;
   }
   
-  public void setmode(Player p)
-  {
+  public void setmode(Player p) {
     p.setGameMode(GameMode.SURVIVAL);
   }
   
-  private class Timer implements Runnable {
+  private class DeadTimer implements Runnable {
 
 	  Player p;
 	  
-	  public Timer(Player p){
+	  public DeadTimer(Player p){
 		  this.p = p;
 	  }
 	  
@@ -468,29 +475,60 @@ public void updateScoreboard(Player p) {
 		try {
 			Thread.sleep((battleOfBlocks.respawnTime * 1000));
 		} catch (InterruptedException e) {
-		e.printStackTrace();
+			e.printStackTrace();
 		}
 		if(isstarted && isinGame(p)){
 			int t = getteam(p);
+			makeCompletlyVisible(p);
 			canteleport = true;
 			if (t == 1) {
-			  p.teleport(locstartblue);
+				p.teleport(locstartblue);
 			} else if (t == 2) {
-			  p.teleport(locstartred);
+				p.teleport(locstartred);
 			}
 			canteleport = false;
-			setMetadata(p, "Dead", false, battleOfBlocks);
+			player_list_dead.put(p.getUniqueId(), false);
 			clearInventory(p);
 			setStuff(p);
 			settunic(p, false);
+			removePotions(p);
 			p.setHealth(p.getMaxHealth());
 			p.setFoodLevel(20);
 		}
 	}
   }
   
-  public void returntothespawn(Player p, boolean die, Player killer)
-  {
+  private void makeCompletlyInvisible(Player p){
+	  for(Player pl : playersingame){
+		  pl.hidePlayer(p);
+	  }
+  }
+  private void makeCompletlyVisible(Player p){
+	  for(Player pl : playersingame){
+		  pl.showPlayer(p);
+	  }
+  }
+  private float toDegree(double angle) {
+	    return (float) Math.toDegrees(angle);
+  }
+  private void makeDeadLooking(Player p, Player killer){
+	  p.playNote(p.getLocation(), Instrument.BASS_GUITAR, Note.natural(1, Tone.E));
+	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
+	  p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 100));
+	  p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 100, -100));
+	  if(killer != null){		 
+		    Vector direction = killer.getEyeLocation().toVector().subtract(p.getEyeLocation().toVector()).normalize();
+		    double x = direction.getX();
+		    double y = direction.getY();
+		    double z = direction.getZ();
+		    Location changed = p.getLocation().clone();
+		    changed.setYaw(180 - toDegree(Math.atan2(x, z)));
+		    changed.setPitch(90 - toDegree(Math.acos(y)));
+		    p.teleport(changed);
+	  }
+  }
+  
+  public void returntothespawn(Player p, boolean die, Player killer){
 	if(battleOfBlocks.respawnTime == 0){
 	    int t = getteam(p);
 	    canteleport = true;
@@ -501,7 +539,6 @@ public void updateScoreboard(Player p) {
 	    }
 	    removePotions(p);
 	    canteleport = false;
-	    setMetadata(p, "Dead", false, battleOfBlocks);
 	    clearInventory(p);
 	    setStuff(p);
 	    settunic(p, false);
@@ -522,19 +559,17 @@ public void updateScoreboard(Player p) {
 		      if (killer != null) {
 			        p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurate(battleOfBlocks.msg.KILLED_BY, p, killer)));
 			        p.sendMessage(PNC() + ChatColor.RED + "Respawn: " + (battleOfBlocks.respawnTime) + " secs !");
-			        canteleport = true;
-			        p.teleport(waitroom);
-			        setMetadata(p, "Dead", true, battleOfBlocks);
-			        canteleport = false;
+			        makeCompletlyInvisible(p);
+			        makeDeadLooking(p, killer);
+			        player_list_dead.put(p.getUniqueId(), true);
 		      } else {
 		    	  	p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_DIE));
 			        p.sendMessage(PNC() + ChatColor.RED + "Respawn: " + (battleOfBlocks.respawnTime) + " secs !");
-			        canteleport = true;
-			        p.teleport(waitroom);
-			        setMetadata(p, "Dead", true, battleOfBlocks);
-			        canteleport = false;
+			        makeCompletlyInvisible(p);
+			        makeDeadLooking(p, null);
+			        player_list_dead.put(p.getUniqueId(), true);
 		      }
-		      new Thread(new Timer(p)).start();
+		      new Thread(new DeadTimer(p)).start();
 		} else {
 			int t = getteam(p);
 			canteleport = true;
@@ -564,7 +599,7 @@ public void updateScoreboard(Player p) {
 	  }
   }
   
-  public void InstaureCountDown(Player p, List<ItemStack> l){
+  private void InstaureCountDown(Player p, List<ItemStack> l){
 	  long now = System.currentTimeMillis();
 	  String to_set = null;
 	  for(ItemStack is : l){
@@ -575,11 +610,11 @@ public void updateScoreboard(Player p) {
 			  to_set = to_set + "@" + itemname + "#" + now;
 		  }
 	  }
-	  counter_l.put(p.getUniqueId(), to_set);
+	  player_list_counter.put(p.getUniqueId(), to_set);
   }
   
-  public void removeCountDownAndPotions(Player p){
-	  counter_l.remove(p.getUniqueId());
+  private void removeCountDownAndPotions(Player p){
+	  player_list_counter.remove(p.getUniqueId());
 	  removePotions(p);
   }
   
@@ -633,14 +668,14 @@ public void updateScoreboard(Player p) {
   	}
   }
   
-  public void removePotions(Player p){
+  private void removePotions(Player p){
 	  for (PotionEffect effect : p.getActivePotionEffects())
 	        p.removePotionEffect(effect.getType());
   }
   
   public void setCountDown(Player p, String name) {
 	  long now = System.currentTimeMillis();
-	  String get = counter_l.get(p.getUniqueId());
+	  String get = player_list_counter.get(p.getUniqueId());
 	  String[] gets = get.split("@");
 	  String to_set = null;
 	  for(String g : gets){
@@ -664,12 +699,12 @@ public void updateScoreboard(Player p) {
 			  e.printStackTrace();
 		  }
 	  }
-	  counter_l.put(p.getUniqueId(), to_set);
+	  player_list_counter.put(p.getUniqueId(), to_set);
   }
   
   public boolean canUsePower(Player p, String name, int seconds){
 	  long now = System.currentTimeMillis();
-	  String get = counter_l.get(p.getUniqueId());
+	  String get = player_list_counter.get(p.getUniqueId());
 	  if(get == null){
 		  return false;
 	  }
@@ -696,7 +731,7 @@ public void updateScoreboard(Player p) {
   
   public int timeBeforeUse(Player p, String name, int seconds){
 	  long now = System.currentTimeMillis();
-	  String get = counter_l.get(p.getUniqueId());
+	  String get = player_list_counter.get(p.getUniqueId());
 	  String[] gets = get.split("@");
 	  long last = 0;
 	  for(String g : gets){
@@ -744,14 +779,15 @@ public void settunic(Player p, boolean fake) {
   
   public void removeall() {
     playersingame.clear();
-    moneys = new HashMap<UUID, Integer>();
-    kills_p = new HashMap<UUID, Integer>();
-    team_l = new HashMap<UUID, Integer>();
-    counter_l = new HashMap<UUID, String>();
+    player_list_money = new HashMap<UUID, Integer>();
+    player_list_kills = new HashMap<UUID, Integer>();
+    player_list_team = new HashMap<UUID, Integer>();
+    player_list_counter = new HashMap<UUID, String>();
+    player_list_names = new HashMap<UUID, String>();
+    player_list_dead = new HashMap<UUID, Boolean>();
   }
   
-  public void stopthegame(int Looser)
-  {  
+  public void stopthegame(int Looser){  
 	int Winner = 0;
     if (Looser == 2) {
       sendAll(ChatColor.YELLOW + "-------------------------------------------");
@@ -759,8 +795,7 @@ public void settunic(Player p, boolean fake) {
       launchfireworks(1);
       updatebarwin(1);
       Winner = 1;
-    }
-    else if (Looser == 1) {
+    } else if (Looser == 1) {
       sendAll(ChatColor.YELLOW + "-------------------------------------------");
       sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.RED_WIN));
       launchfireworks(2);
@@ -803,21 +838,33 @@ public void settunic(Player p, boolean fake) {
     resetArena();
   }
   
-public void finishthegame(int Winner) {
+  public void startthegame(){
+	  if(!isstarted){
+		  teleportStart();
+	  }
+  }
+  
+private void removeLastEssentialsLocation(Player p){
+	  if(battleOfBlocks.essentials_enabled){
+	    	battleOfBlocks.essentials.getUser(p).setLastLocation(p.getLocation());
+	  }
+  }
+  
+public void finishthegame(int winner) {
 	redlife = life;
     bluelife = life;
     isstarted = false;
     canteleport = true;
     
-    teleportall(1, Winner);
-    if(Winner == 0) sendAll(PNC() + ChatColor.RED + "All the players left the game ! The game was stopped !");
-    sendAll(PNC() + ChatColor.GREEN + "Thanks for playing ! Plugin by gpotter2 !");
+    teleportEnd(winner);
+    if(winner == 0) sendAll(PNC() + ChatColor.RED + "All the players left the game ! The game was stopped !");
+    sendAll(PNC() + ChatColor.GREEN + "Thanks for playing ! Plugin by" + ChatColor.BOLD + " gpotter2  " + ChatColor.RESET + ChatColor.GREEN + "!");
     removeall();
     SignUtility.updatesigns();
-  }
+}
   
 @SuppressWarnings("deprecation")
-public void resetArena(){
+private void resetArena(){
 	  if(canbuild){
 		  for(int i = 0; i < saveplace.size(); i++) {
 			  Location l = saveplace.get(i);
@@ -840,12 +887,12 @@ public void resetArena(){
 		  }
 	  }
 		for(int i = 0; i < vblue.size(); i++) {
-			Block b = vblue.elementAt(i).getBlock();
+			Block b = vblue.get(i).getBlock();
 			b.setType(Material.WOOL);
 	        b.setData(DyeColor.BLUE.getData());
 		}
 		for(int i = 0; i < vred.size(); i++) {
-			Block b = vred.elementAt(i).getBlock();
+			Block b = vred.get(i).getBlock();
 			b.setType(Material.WOOL);
 	        b.setData(DyeColor.RED.getData());
 		}
@@ -871,13 +918,14 @@ public void resetArena(){
     	SignUtility.updatesigns();
     }
     clearInventory(player);
-    setInventoryPlayerString(player);
+    restoreInventory(player);
     resetScoreboard(player);
+    removeLastEssentialsLocation(player);
     player.teleport(locend);
     sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurate(battleOfBlocks.msg.OTHER_LEFT_THE_GAME, player, null)));
   }
   
-  public void settalkbarre()
+  private void settalkbarre()
   {
     if (battleOfBlocks.barapienabled) {
       for (int i = 0; i < playersingame.size(); i++)
@@ -964,15 +1012,15 @@ public void resetArena(){
 	        	player.setMaxHealth(20);
 	            player.setHealth(player.getMaxHealth());
 	            player.setFoodLevel(20);
+	            setmode(player);
+	            saveInventory(player);
 	            playersingame.add(player);
 	            iswaiting = true;
-	            setInvtoryString(player);
 	            sendAll(battleOfBlocks.msg.structurate(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_JOIN_THE_GAME), player, null) + ChatColor.GREEN + "(" + getConnectedPlayers() + "/" + pmax + ")");
 	            SignUtility.updatesigns();
 	            canteleport = true;
 	            player.teleport(waitroom);
 	            canteleport = false;
-	            setmode(player);
 	            updatebarjoin();
 	            player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_JOINED_THE_GAME));
 	            setmoney(player, 0);
@@ -982,15 +1030,15 @@ public void resetArena(){
 	            setInventorySelect(player);
 	            setKitChooser(player);
 	            if (getConnectedPlayers() == startmin) {
-	              Thread t = new Thread(new ArenaChrono(this, 1, 0));
-	              t.start();
+	            	Thread t = new Thread(new ArenaChrono(this, 1, 0));
+	            	t.start();
 	            }
           } else {
-            player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.TOO_MANY_PEOPLE));
+        	  player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.TOO_MANY_PEOPLE));
           }
         } else {
-          player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_IN_GAME));
-          player.teleport(waitroom);
+        	player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_IN_GAME));
+        	player.teleport(waitroom);
         }
       } else {
     	if(getConnectedPlayers() == 0) {
@@ -1005,13 +1053,13 @@ public void resetArena(){
   
   public void setTeam(int t, Player p) {
     if (t == 1) {
-	  team_l.put(p.getUniqueId(), t);
+	  player_list_team.put(p.getUniqueId(), t);
       p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_TEAM_BLUE));
       clearInventory(p);
       setKitChooser(p);
       setInventorySelect(p);
     } else if (t == 2) {
-	  team_l.put(p.getUniqueId(), t);
+	  player_list_team.put(p.getUniqueId(), t);
       p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_TEAM_RED));
       clearInventory(p);
       setKitChooser(p);
@@ -1024,7 +1072,7 @@ public void resetArena(){
   }
   
   @SuppressWarnings("deprecation")
-public void setInventorySelect(Player p)
+private void setInventorySelect(Player p)
   {
     Wool wool1 = new Wool(DyeColor.BLUE);
     ItemStack stack1 = wool1.toItemStack(1);
@@ -1043,7 +1091,7 @@ public void setInventorySelect(Player p)
   }
   
   @SuppressWarnings("deprecation")
-public void setKitChooser(Player p){
+private void setKitChooser(Player p){
 	  p.getInventory().setItem(8, getIS(Material.NETHER_STAR, "Kit chooser", "Choose your kit", null, p));
 	  if(battleOfBlocks.vaultenabled_economy){
 		  p.getInventory().setItem(7, getIS(Material.EMERALD, "OutShop", "Shop", null, p));
@@ -1052,7 +1100,7 @@ public void setKitChooser(Player p){
   }
   
   @SuppressWarnings("deprecation")
-public List<ItemStack> setStuff(Player p) {
+private List<ItemStack> setStuff(Player p) {
     ItemStack nuggetg = new ItemStack(Material.EMERALD);
     ItemMeta im = nuggetg.getItemMeta();
     im.setDisplayName("POWERUPS");
@@ -1067,13 +1115,13 @@ public List<ItemStack> setStuff(Player p) {
     	}
     } else {
     	if(battleOfBlocks.kits != null) {
-	    	Vector<Kit> v = battleOfBlocks.kits.v;
+	    	List<Kit> v = battleOfBlocks.kits.v;
 			for(int i = 0; i < v.size(); i++) {
-				Kit k = v.elementAt(i);
+				Kit k = v.get(i);
 				if(k.name == kp) {
-					Vector<ItemsKit> v2 = k.v;
+					List<ItemsKit> v2 = k.v;
 					for(int i2 = 0; i2 < v2.size(); i2++) {
-						ItemsKit ik = v2.elementAt(i2);
+						ItemsKit ik = v2.get(i2);
 						p.getInventory().addItem(ik.is);
 					}
 					break;
@@ -1085,13 +1133,13 @@ public List<ItemStack> setStuff(Player p) {
     return listi;
   }
   
-  public float pourcentage(float a, float b)
+  private float pourcentage(float a, float b)
   {
     float percent = a / b * 100.0F;
     return percent;
   }
   
-  public void launchfireworks(int winner)
+  private void launchfireworks(int winner)
   {
     for (int i = 0; i < playersingame.size(); i++) {
       Player p = (Player)playersingame.get(i);
@@ -1111,7 +1159,7 @@ public List<ItemStack> setStuff(Player p) {
   }
   
   @SuppressWarnings("deprecation")
-public void clearInventory(Player p)
+private void clearInventory(Player p)
   {
     p.getInventory().clear();
     p.getInventory().setChestplate(null);
@@ -1121,7 +1169,7 @@ public void clearInventory(Player p)
     p.updateInventory();
   }
   
-  public void chooseteamh(CommandSender pl)
+  private void chooseteamh(CommandSender pl)
   {
     Player p = (Player)pl;
     if (nbrblue() == nbrred()) {
@@ -1154,12 +1202,12 @@ public void clearInventory(Player p)
   }
   
   public int getmoney(Player p){
-	  int result = moneys.containsKey(p.getUniqueId()) ? moneys.get(p.getUniqueId()) : 0;
+	  int result = player_list_money.containsKey(p.getUniqueId()) ? player_list_money.get(p.getUniqueId()) : 0;
 	  return result;
   }
   
   public void setmoney(Player p, int m){
-	  moneys.put(p.getUniqueId(), m);
+	  player_list_money.put(p.getUniqueId(), m);
   }
   
   public void pay(Player p, int price)
@@ -1169,12 +1217,12 @@ public void clearInventory(Player p)
   }
   
   public int nbrkills(Player p) {
-	  int result = kills_p.containsKey(p.getUniqueId()) ? kills_p.get(p.getUniqueId()) : 0;
+	  int result = player_list_kills.containsKey(p.getUniqueId()) ? player_list_kills.get(p.getUniqueId()) : 0;
 	  return result;
   }
   
   void addnbrkills(Player p) {
-	  kills_p.put(p.getUniqueId(), Integer.valueOf(nbrkills(p) + 1));
+	  player_list_kills.put(p.getUniqueId(), Integer.valueOf(nbrkills(p) + 1));
 	  updateScoreboard(p);
   }
   
@@ -1199,38 +1247,6 @@ public void clearInventory(Player p)
     addnbrkills(k);
   }
   
-  @SuppressWarnings("deprecation")
-@EventHandler
-public void onSelectTeam(BlockPlaceEvent event) {
-	if(iswaiting){
-		Player p = event.getPlayer();
-	    if (isinGame(p)) {
-	    	if(battleOfBlocks.hasPermission(p, "battleofblocks.chooseteam")) {
-		        Byte b = Byte.valueOf(DyeColor.BLUE.getData());
-		        Byte b2 = Byte.valueOf(DyeColor.RED.getData());
-		        Block bb = event.getBlock();
-		        Byte bbb = Byte.valueOf(bb.getData());
-		        if (event.getBlock().getType().equals(Material.WOOL)) {
-			        if (bbb.equals(b)) {
-			          setTeam(1, p);
-			          event.setCancelled(true);
-			        } else if (bbb.equals(b2)) {
-			        	setTeam(2, p);
-			            event.setCancelled(true);   
-			        }
-		        }
-	    	} else {
-				p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
-				event.setCancelled(true);
-				clearInventory(p);
-				setInventorySelect(p);
-				setKitChooser(p);
-				setInventorySelect(p);
-			}
-	    }
-	}
-}
-  
   @EventHandler
 	public void openInventoriesWhileWaiting(PlayerInteractEvent event){
 	  if(iswaiting){
@@ -1248,8 +1264,35 @@ public void onSelectTeam(BlockPlaceEvent event) {
 						  battleOfBlocks.shop.startShop(p);
 					  }
 				  }
-			  }
+			  } else if(is.getType() == Material.WOOL){
+					Player p = event.getPlayer();
+				    if (isinGame(p)) {
+				    	if(battleOfBlocks.hasPermission(p, "battleofblocks.chooseteam")) {
+					        @SuppressWarnings("deprecation")
+							Byte b1 = Byte.valueOf(DyeColor.BLUE.getData());
+					        @SuppressWarnings("deprecation")
+							Byte b2 = Byte.valueOf(DyeColor.RED.getData());
+					        @SuppressWarnings("deprecation")
+							Byte b_get = is.getData().getData();
+					        if (b_get.equals(b1)) {
+					          setTeam(1, p);
+					          event.setCancelled(true);
+					        } else if (b_get.equals(b2)) {
+					        	setTeam(2, p);
+					            event.setCancelled(true);   
+					        }
+				    	} else {
+							p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
+							event.setCancelled(true);
+							clearInventory(p);
+							setInventorySelect(p);
+							setKitChooser(p);
+							setInventorySelect(p);
+						}
+				    }
+				}
 		  }
+	  
 	  }
   }
   
@@ -1262,7 +1305,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
         {
           detection = 0;
           Location l2 = event.getBlockPlaced().getLocation();
-          vblue.addElement(l2);
+          vblue.add(l2);
           event.getBlockPlaced().setType(Material.WOOL);
           event.getBlockPlaced().setData(DyeColor.BLUE.getData());
           event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "This block is now a bblock !");
@@ -1271,24 +1314,22 @@ public void onSelectTeam(BlockPlaceEvent event) {
         {
           detection = 0;
           Location l2 = event.getBlockPlaced().getLocation();
-          vred.addElement(l2);
+          vred.add(l2);
           event.getBlockPlaced().setType(Material.WOOL);
           event.getBlockPlaced().setData(DyeColor.RED.getData());
           event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "This block is now a bblock !");
         }
       }
-      for (int i = 0; i < vblue.size(); i++)
-      {
-        Location loc = (Location)vblue.elementAt(i);
+      for (int i = 0; i < vblue.size(); i++) {
+        Location loc = (Location)vblue.get(i);
         if (loc.getBlock().getType() == Material.AIR) {
-          vblue.removeElementAt(i);
+          vblue.remove(i);
         }
       }
-      for (int i = 0; i < vred.size(); i++)
-      {
-        Location loc = (Location)vred.elementAt(i);
+      for (int i = 0; i < vred.size(); i++) {
+        Location loc = (Location)vred.get(i);
         if (loc.getBlock().getType() == Material.AIR) {
-          vred.removeElementAt(i);
+          vred.remove(i);
         }
       }
     }
@@ -1306,19 +1347,20 @@ public void onSelectTeam(BlockPlaceEvent event) {
   }
   
   @EventHandler
-  public void onquit(PlayerQuitEvent event)
-  {
-    if (isinGame(event.getPlayer())) {
-      disconnect(event.getPlayer());
-    }
+  public void onquit(PlayerQuitEvent event) {
+	  if(isstarted || iswaiting){
+	    if (isinGame(event.getPlayer())) {
+	      disconnect(event.getPlayer());
+	    }
+	  }
   }
   
   @EventHandler
-  public void ongamemode(PlayerGameModeChangeEvent event)
-  {
-    if ((isstarted) && 
-      (isinGame(event.getPlayer()))) {
-      event.setCancelled(true);
+  public void ongamemode(PlayerGameModeChangeEvent event) {
+    if ((isstarted || iswaiting)) {
+    	if(isinGame(event.getPlayer())){
+    		event.setCancelled(true);
+    	}
     }
   }
   
@@ -1330,11 +1372,11 @@ public void onSelectTeam(BlockPlaceEvent event) {
         detection = 0;
         int ok = 0;
         for (int i = 0; i < vblue.size(); i++) {
-          Location l = (Location)vblue.elementAt(i);
+          Location l = (Location)vblue.get(i);
           Location l2 = event.getBlock().getLocation();
           if (l.equals(l2)) {
             event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "Bblock deleted !");
-            vred.removeElementAt(i);
+            vred.remove(i);
             ok = 1;
           }
         }
@@ -1348,11 +1390,11 @@ public void onSelectTeam(BlockPlaceEvent event) {
         detection = 0;
         int ok = 0;
         for (int i = 0; i < vred.size(); i++) {
-          Location l = (Location)vred.elementAt(i);
+          Location l = (Location)vred.get(i);
           Location l2 = event.getBlock().getLocation();
           if (l.equals(l2)) {
             event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "Bblock deleted !");
-            vred.removeElementAt(i);
+            vred.remove(i);
             ok = 1;
           }
         }
@@ -1362,17 +1404,21 @@ public void onSelectTeam(BlockPlaceEvent event) {
         }
       }
     } else {
-      if(!isstarted || iswaiting){
-    	  event.setCancelled(true);
-      } else if ((redlife <= 0) || (bluelife <= 0)) {
-    	  event.setCancelled(true);
-      } else {
     	  if(event.getBlock().getType() == Material.WOOL){
 		        for (int i = 0; i < vblue.size(); i++) {
-		          Location l = (Location)vblue.elementAt(i);
+		          Location l = (Location) vblue.get(i);
 		          Location l2 = event.getBlock().getLocation();
 		          if (l.equals(l2)) {
 		        	  if (isinGame(event.getPlayer())) {
+		        		  if(iswaiting){
+		        			  event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_NOT_STARTED));
+			            	  event.setCancelled(true);
+			            	  return;
+			              } else if ((redlife <= 0) || (bluelife <= 0)) {
+			            	  event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_NOT_STARTED));
+			            	  event.setCancelled(true);
+			            	  return;
+			              }
 		            	  if (getteam(event.getPlayer()) == 1) {
 		                    event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOUR_TEAM_BLOCK));
 		                    event.setCancelled(true);
@@ -1395,45 +1441,51 @@ public void onSelectTeam(BlockPlaceEvent event) {
 		        	  } else {
 				     		event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "You cannot destroy a bblock !");
 				     		event.setCancelled(true);
-				       }
-		              event.setCancelled(true);
+				      }
 			    	  break;
 		            }
 		        }
 		    	 for (int i = 0; i < vred.size(); i++) {
-				       Location l = (Location)vred.elementAt(i);
+				       Location l = (Location)vred.get(i);
 				       Location l2 = event.getBlock().getLocation();
 				       if (l.equals(l2)) {
 				    	   if (isinGame(event.getPlayer())) {
-					           if (getteam(event.getPlayer()) == 2) {
-					            	event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOUR_TEAM_BLOCK));
-					            	event.setCancelled(true);
+				    		   	  if(iswaiting){
+				        			  event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_NOT_STARTED));
+					            	  event.setCancelled(true);
+					            	  return;
+					              } else if ((redlife <= 0) || (bluelife <= 0)) {
+					            	  event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.GAME_NOT_STARTED));
+					            	  event.setCancelled(true);
+					            	  return;
+					              }
+						           if (getteam(event.getPlayer()) == 2) {
+						            	event.getPlayer().sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOUR_TEAM_BLOCK));
+						            	event.setCancelled(true);
+						                break;
+						           }
+					              redlife -= 1;
+					              if (redlife == 0) {
+					                stopthegame(2);
+					                event.setCancelled(true);
 					                break;
-					           }
-				              redlife -= 1;
-				              if (redlife == 0) {
-				                stopthegame(2);
-				                event.setCancelled(true);
-				                break;
-				              }
-				              sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurateLives(battleOfBlocks.msg.RED_LIVES, redlife)));
-				              canteleport = true;
-				              event.getPlayer().teleport(locstartblue);
-				              canteleport = false;
-				              addmoney(1);
-				              settalkbarre();
-				              ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 1, 5, event.getBlock().getLocation(), playersingame);
-				              event.setCancelled(true);
+					              }
+					              sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurateLives(battleOfBlocks.msg.RED_LIVES, redlife)));
+					              canteleport = true;
+					              event.getPlayer().teleport(locstartblue);
+					              canteleport = false;
+					              addmoney(1);
+					              settalkbarre();
+					              ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 1, 5, event.getBlock().getLocation(), playersingame);
+					              event.setCancelled(true);
 				    	   } else {
 					     		event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "You cannot destroy a bblock !");
 					     		event.setCancelled(true);
 					       }
-				    	   event.setCancelled(true);
 				    	   break;
 				       }
-				    }
+				 }
 	      }
-      }
     }
     if(canbreak){
     	if(isinGame(event.getPlayer())){
@@ -1449,15 +1501,17 @@ public void onSelectTeam(BlockPlaceEvent event) {
     		}
     	}
     } else {
-	    if(isinGame(event.getPlayer())){
-			 event.setCancelled(true);
-			 canteleport = true;
-		     event.getPlayer().teleport(tronc(event.getPlayer().getLocation()));
-		     canteleport = false;
-		}
+    	if(isstarted || iswaiting){
+		    if(isinGame(event.getPlayer())){
+				 event.setCancelled(true);
+				 canteleport = true;
+			     event.getPlayer().teleport(tronc(event.getPlayer().getLocation()));
+			     canteleport = false;
+			}
+    	}
     }
   }
-  public Location tronc(Location loc){
+  private Location tronc(Location loc){
 		Location fin = loc.clone();
 		fin.setY(fin.getY() + 0.5);
 		return fin;
@@ -1483,25 +1537,6 @@ public void onSelectTeam(BlockPlaceEvent event) {
     }
   }
   
-  @EventHandler(priority=EventPriority.HIGH)
-  public void nodamageteamandpay(EntityDamageByEntityEvent event)
-  {
-    if ((isstarted) && 
-      ((event.getEntity() instanceof Player))) {
-      Player p = (Player)event.getEntity();
-      if (isinGame(p)){
-        int t = getteam(p);
-        if ((event.getDamager() instanceof Player))
-        {
-          Player d = (Player) event.getDamager();
-          if (getteam(d) == t) {
-        	  event.setCancelled(true);
-          }
-        }
-      }
-    }
-  }
-  
   @EventHandler
   public void onplayerdie(EntityDamageByEntityEvent event) {
     if (isstarted) {
@@ -1510,12 +1545,19 @@ public void onSelectTeam(BlockPlaceEvent event) {
       }
       Player p = (Player) event.getEntity();
       if (isinGame(p)) {
-    	  if(getMetadata(p, "Dead", battleOfBlocks) != null){
-    		  if((boolean) getMetadata(p, "Dead", battleOfBlocks) == true){
+    	  if(player_list_dead.get(p.getUniqueId()) != null){
+    		  if(player_list_dead.get(p.getUniqueId())){
     			  event.setCancelled(true);
     			  return;
     		  }
     	  }
+          if ((event.getDamager() instanceof Player)) {
+            Player d = (Player) event.getDamager();
+            if (getteam(d) == getteam(p)) {
+          	  	event.setCancelled(true);
+          	  	return;
+            }
+          }
     	String kit_p = getKitName(p);
     	if(kit_p.equalsIgnoreCase("Troll")) settunic(p, false);
         Damageable damage = p;
@@ -1528,10 +1570,10 @@ public void onSelectTeam(BlockPlaceEvent event) {
         }
         if (damage.getHealth() <= event.getDamage()) {
           if ((event.getDamager() instanceof Player)) {
-            Player killer = (Player)event.getDamager();
-            addmoney(killer);
-            returntothespawn(p, true, killer);
-            event.setCancelled(true);
+	            Player killer = (Player) event.getDamager();
+	            addmoney(killer);
+	            returntothespawn(p, true, killer);
+	            event.setCancelled(true);
           } else if((event.getDamager() instanceof Projectile)) {
         	  ProjectileSource ps = ((Projectile) event.getDamager()).getShooter();
         	  if(ps instanceof Player){
@@ -1592,8 +1634,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
   
   public boolean canchangeweather = true;
   @EventHandler
-  public void changeweather(WeatherChangeEvent event)
-  {
+  public void changeweather(WeatherChangeEvent event){
     if (isstarted && event.getWorld() == locstartred.getWorld() && canchangeweather) {
     	canchangeweather = false;
     	locstartred.getWorld().setTime(0L);
@@ -1630,7 +1671,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
     }
   }
   
-  public boolean cancommand(Player p){
+  private boolean cancommand(Player p){
 	  if(getMetadata(p, "cancommand", battleOfBlocks) != null){
 		  if((boolean) getMetadata(p, "cancommand", battleOfBlocks) == true){
 			  return true;
@@ -1660,7 +1701,6 @@ public void onSelectTeam(BlockPlaceEvent event) {
 			  if(event.getMessage().equalsIgnoreCase("/leave")){
 				  p.sendMessage(PNC() + ChatColor.RED + "You left the game !");
 				  disconnect(p);
-				  p.teleport(locend);
 				  event.setCancelled(true);
 			  } else if(event.getMessage().equalsIgnoreCase("/status")) {
 				  event.setCancelled(true);
@@ -1694,11 +1734,11 @@ public void onSelectTeam(BlockPlaceEvent event) {
 	  }
   }
   
-  public ItemStack getIS(Material m, String name, String sousname, String perm, Player p){
+  private ItemStack getIS(Material m, String name, String sousname, String perm, Player p){
 	  return getIS(new ItemStack(m, 1), name, sousname, perm, p);
   }
   
-	public ItemStack getIS(ItemStack i, String name, String sousname, String perm, Player p){
+	private ItemStack getIS(ItemStack i, String name, String sousname, String perm, Player p){
 		i.setAmount(1);
 		ItemMeta im = i.getItemMeta();
 		List<String> l = new LinkedList<String>();
@@ -1719,7 +1759,7 @@ public void onSelectTeam(BlockPlaceEvent event) {
 		return i;
 	}
 	
-	public Inventory getInvChooseKit(Player p, String arenaname){
+	private Inventory getInvChooseKit(Player p, String arenaname){
 		Inventory inv;
 		inv = Bukkit.createInventory(p,27,ChatColor.GREEN + "BattleOfBlocks KITS ! " + arenaname);
 		inv.setMaxStackSize(999);
@@ -1731,9 +1771,9 @@ public void onSelectTeam(BlockPlaceEvent event) {
 		inv.addItem(getIS(Material.FEATHER, "Troll", "TROLOLOLOL!", "battleofblocks.hasbuy.kit.Troll", p));
 		inv.addItem(getIS(Material.TNT, "Fury", "Im not happy with you!!!", "battleofblocks.hasbuy.kit.Fury", p));
 		if(battleOfBlocks.kits != null){
-			Vector<Kit> v = battleOfBlocks.kits.v;
+			List<Kit> v = battleOfBlocks.kits.v;
 			for(int i = 0; i < v.size(); i++){
-				Kit k = v.elementAt(i);
+				Kit k = v.get(i);
 				inv.addItem(getIS(k.m, k.name, k.des, k.perm, p));
 			}
 		}
@@ -1773,14 +1813,32 @@ public void onSelectTeam(BlockPlaceEvent event) {
 	  if(isstarted) {
 		  Player p = event.getPlayer();
 		  if(isinGame(p)) {
+			  p.teleport(waitroom);
 			  if(getteam(p) == 1){
 				  returntothespawn(p, true, null);
 			  } else if(getteam(p) == 2) {
 				  returntothespawn(p, true, null);
-			  } else {
-				  p.teleport(waitroom);
 			  }
 		  }
 	  }
   }
+
+@Override
+public boolean isCorrect() {
+	if(locend == null){
+		return false;
+	} else if(locstartred == null){ 
+		return false;
+	} else if(locstartblue == null){
+		return false;
+	} else if(waitroom == null){
+		return false;
+	} else if(vblue.isEmpty() || vred.isEmpty()){
+		return false;
+	} else if(pmax < startmin) { 
+		return false;
+	} else {
+		return true;
+	}
+}
 }

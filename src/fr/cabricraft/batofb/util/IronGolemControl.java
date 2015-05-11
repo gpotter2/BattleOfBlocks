@@ -91,9 +91,9 @@ public void run() {
 	  if(golem.isValid()) p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.IRON_GOLEM_DIE));
   }
   
-  public Location getbh(java.util.Vector<Location> v){
+  public Location getbh(List<Location> v){
 	  int i = (int)(Math.random() * (v.size()));
-	  Location loc = v.elementAt(i);
+	  Location loc = v.get(i);
 	  return loc;
   }
 }

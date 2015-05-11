@@ -60,7 +60,7 @@ public class ArenaChrono implements Runnable {
 			  }
 			  if(ok == 1){
 				  arena.sendAll(arena.PNC() + ChatColor.GREEN + "The game started !");
-				  arena.teleportall(2, 0);
+				  arena.startthegame();
 			  }
 				  
 			  ok = 1;

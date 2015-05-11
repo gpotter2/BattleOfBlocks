@@ -43,7 +43,6 @@ public class Messages {
 		RED_WIN = PNC + "&cThe RED team has won !!!";
 		TOO_MANY_PEOPLE = PNC + "&cToo many people connected !";
 		ALREADY_IN_GAME = PNC + "&cYou are already in game !";
-		GAME_ALREADY_STARTED = PNC + "&cGame already started !";
 		TEAM_FULL = PNC + "&cThis team is full !";
 		GAME_FULL = PNC + "&cThe game is full !";
 		YOU_TEAM_BLUE = PNC + "&aYou are in BLUE team !";
@@ -53,6 +52,8 @@ public class Messages {
 		RED_LIVES = PNC + "&cReds lose a life, they keep %lives% lives !";
 		NO_COMMANDS_IN_GAME = PNC + "&cYou cannot use commands in game ! To leave, type &e/leave &c!";
 		GAME_START_IN_X_SECONDS = PNC + "&aThe game start in %secs% seconds !";
+		GAME_ALREADY_STARTED = PNC + "&cGame already started !";
+		GAME_NOT_STARTED = PNC + "&cGame not started !";
 		SLOW = PNC + "&aSlow your ennemies !";
 		REDSTONE_POWER = PNC + "&aInstant teleport in 7 blocks where you are looking at !";
 		JUMP = PNC + "&aHave a jump boots for 10 secs !";
@@ -74,6 +75,7 @@ public class Messages {
 		MONEY_EARN = PNC + "&aYou earn a total of %money% !";
 		MONEY_REMOVE = PNC + "&aYou spend a total of %money% !";
 		MONEY_NOW = PNC + "&aYou have now %money% !";
+		FUNCTION_DISABLED = PNC + "&cThis function is disabled !";
 		NEED = "Need";
 		config = battleOfBlocks.conffile("messages.yml");
 	}
@@ -96,7 +98,6 @@ public class Messages {
 	public String RED_WIN;
 	public String TOO_MANY_PEOPLE;
 	public String ALREADY_IN_GAME;
-	public String GAME_ALREADY_STARTED;
 	public String TEAM_FULL;
 	public String YOU_TEAM_BLUE;
 	public String YOU_TEAM_RED;
@@ -106,6 +107,8 @@ public class Messages {
 	public String GAME_FULL;
 	public String NO_COMMANDS_IN_GAME;
 	public String GAME_START_IN_X_SECONDS;
+	public String GAME_ALREADY_STARTED;
+	public String GAME_NOT_STARTED;
 	
 	//Kits
 	public String SLOW;
@@ -140,6 +143,9 @@ public class Messages {
 	
 	//IN BARAPI
 	public String NEED;
+	
+	//OTHER
+	public String FUNCTION_DISABLED;
 	
 	public String structurate(String ToStructurate, Player concerned, Player killer){
 		String DoneStructurate = ToStructurate;
@@ -209,7 +215,6 @@ public class Messages {
 				if(cs.getString("BLUE_LIVES") != null) BLUE_LIVES = PNC + cs.getString("BLUE_LIVES");
 				if(cs.getString("BLUE_WIN") != null) BLUE_WIN = PNC + cs.getString("BLUE_WIN");
 				if(cs.getString("MONEY_EARN") != null) MONEY_EARN = PNC + cs.getString("MONEY_EARN");
-				if(cs.getString("GAME_ALREADY_STARTED") != null) GAME_ALREADY_STARTED = PNC + cs.getString("GAME_ALREADY_STARTED");
 				if(cs.getString("HERE_YOU_ARE") != null) HERE_YOU_ARE = PNC + cs.getString("HERE_YOU_ARE");
 				if(cs.getString("IRON_GOLEM_DIE") != null) IRON_GOLEM_DIE = PNC + cs.getString("IRON_GOLEM_DIE");
 				if(cs.getString("KILLED_BY") != null) KILLED_BY = PNC + cs.getString("KILLED_BY");
@@ -234,6 +239,9 @@ public class Messages {
 				if(cs.getString("NEED") != null) NEED = cs.getString("NEED");
 				if(cs.getString("OTHER_JOIN_THE_GAME") != null) OTHER_JOIN_THE_GAME = PNC + cs.getString("OTHER_JOIN_THE_GAME");
 				if(cs.getString("GAME_START_IN_X_SECONDS") != null) GAME_START_IN_X_SECONDS = PNC + cs.getString("GAME_START_IN_X_SECONDS");
+				if(cs.getString("GAME_ALREADY_STARTED") != null) GAME_ALREADY_STARTED = PNC + cs.getString("GAME_ALREADY_STARTED");
+				if(cs.getString("GAME_NOT_STARTED") != null) GAME_NOT_STARTED = PNC + cs.getString("GAME_NOT_STARTED");
+				if(cs.getString("FUNCTION_DISABLED") != null) FUNCTION_DISABLED = cs.getString("FUNCTION_DISABLED");
 				if(cs.getString("SLOW") != null) SLOW = cs.getString("SLOW");
 				if(cs.getString("REDSTONE_POWER") != null) REDSTONE_POWER = cs.getString("REDSTONE_POWER");
 				if(cs.getString("JUMP") != null) JUMP = cs.getString("JUMP");
@@ -257,7 +265,6 @@ public class Messages {
 		config.set(section + "BLUE_LIVES",BLUE_LIVES.replace(PNC, ""));
 		config.set(section + "BLUE_WIN",BLUE_WIN.replace(PNC, ""));
 		config.set(section + "MONEY_EARN",MONEY_EARN.replace(PNC, ""));
-		config.set(section + "GAME_ALREADY_STARTED",GAME_ALREADY_STARTED.replace(PNC, ""));
 		config.set(section + "HERE_YOU_ARE",HERE_YOU_ARE.replace(PNC, ""));
 		config.set(section + "IRON_GOLEM_DIE",IRON_GOLEM_DIE.replace(PNC, ""));
 		config.set(section + "KILLED_BY",KILLED_BY.replace(PNC, ""));
@@ -282,6 +289,9 @@ public class Messages {
 		config.set(section + "NEED", NEED);
 		config.set(section + "OTHER_JOIN_THE_GAME", OTHER_JOIN_THE_GAME.replace(PNC, ""));
 		config.set(section + "GAME_START_IN_X_SECONDS", GAME_START_IN_X_SECONDS.replace(PNC, ""));
+		config.set(section + "GAME_ALREADY_STARTED",GAME_ALREADY_STARTED.replace(PNC, ""));
+		config.set(section + "GAME_NOT_STARTED",GAME_NOT_STARTED.replace(PNC, ""));
+		config.set(section + "FUNCTION_DISABLED",FUNCTION_DISABLED.replace(PNC, ""));
 		config.set(section + "SLOW", SLOW.replace(PNC, ""));
 		config.set(section + "REDSTONE_POWER", REDSTONE_POWER.replace(PNC, ""));
 		config.set(section + "JUMP", JUMP.replace(PNC, ""));
