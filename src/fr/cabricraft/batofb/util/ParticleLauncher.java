@@ -20,11 +20,9 @@ package fr.cabricraft.batofb.util;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import org.bukkit.EntityEffect;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -45,7 +43,7 @@ public class ParticleLauncher {
 	
 	public List<LivingEntity> launchFirework(Player p, ParticleEffect pe){
 		  Location loc1 = p.getEyeLocation();
-		  Location loc2 = p.getTargetBlock((Set<Material>) null, 100).getLocation();
+		  Location loc2 = ar.battleOfBlocks.getTargetBlock(p, 100).getLocation();
 		  List<Location> list = l_straight(loc1, loc2);
 		  List<LivingEntity> hitted = new LinkedList<LivingEntity>();
 		  for(Location l : list){
@@ -56,7 +54,12 @@ public class ParticleLauncher {
 				  for(Entity e : le){
 					  if(e instanceof LivingEntity){
 						  if(e instanceof Player){
-							  if(e != p) if(!hitted.contains(e)) hitted.add((LivingEntity) e);
+							  Player h_e = (Player) e;
+							  if(h_e.getUniqueId() != p.getUniqueId()){
+								  if(!ar.isDead(h_e)){
+									  if(!hitted.contains(e)) hitted.add((LivingEntity) e);
+								  }
+							  }
 						  } else {
 							  if(!hitted.contains(e)) hitted.add((LivingEntity) e);
 						  }

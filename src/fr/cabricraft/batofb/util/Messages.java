@@ -34,8 +34,8 @@ public class Messages {
 		if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
 		this.PNC = ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
 		PERMISSION_DENIED = PNC + "&cYou don't have permission to do that !";
-		KILLED_BY = PNC + "&cYou were killed by %killer% ! Respawn !";
-		OTHER_DIE = PNC + "&cYou die ! Respawn !";
+		KILLED_BY = PNC + "&cYou were killed by %killer% !";
+		YOU_DIE = PNC + "&cYou die !";
 		YOU_JOINED_THE_GAME = PNC + "&aYou joined the game ! To leave it, type &e/leave &a!";
 		OTHER_JOIN_THE_GAME = PNC + "&aThe player &r %player% &ajoined the game !";
 		OTHER_LEFT_THE_GAME = PNC + "&cThe player &r %player% &cleft the game !";
@@ -90,7 +90,7 @@ public class Messages {
 	//IN ARENAS
 	public String PERMISSION_DENIED;
 	public String KILLED_BY;
-	public String OTHER_DIE;
+	public String YOU_DIE;
 	public String YOU_JOINED_THE_GAME;
 	public String OTHER_JOIN_THE_GAME;
 	public String OTHER_LEFT_THE_GAME;
@@ -179,31 +179,11 @@ public class Messages {
 		DoneStructurate = DoneStructurate.replace("%secs%", String.valueOf(time));
 		return DoneStructurate;
 	}
+	public String putColorRemovePNC(String brut){
+		return putColor(brut.replace(PNC, ""));
+	}
 	public String putColor(String brut){
-		String Colordone = brut;
-		Colordone = Colordone.replace("&4", ChatColor.DARK_RED + "");
-		Colordone = Colordone.replace("&c", ChatColor.RED + "");
-		Colordone = Colordone.replace("&6", ChatColor.GOLD + "");
-		Colordone = Colordone.replace("&e", ChatColor.YELLOW + "");
-		Colordone = Colordone.replace("&2", ChatColor.DARK_GREEN + "");
-		Colordone = Colordone.replace("&a", ChatColor.GREEN + "");
-		Colordone = Colordone.replace("&b", ChatColor.AQUA + "");
-		Colordone = Colordone.replace("&3", ChatColor.DARK_AQUA + "");
-		Colordone = Colordone.replace("&1", ChatColor.DARK_BLUE + "");
-		Colordone = Colordone.replace("&9", ChatColor.BLUE + "");
-		Colordone = Colordone.replace("&d", ChatColor.LIGHT_PURPLE + "");
-		Colordone = Colordone.replace("&5", ChatColor.DARK_PURPLE + "");
-		Colordone = Colordone.replace("&f", ChatColor.WHITE + "");
-		Colordone = Colordone.replace("&7", ChatColor.GRAY + "");
-		Colordone = Colordone.replace("&8", ChatColor.DARK_GRAY + "");
-		Colordone = Colordone.replace("&0", ChatColor.BLACK + "");
-		Colordone = Colordone.replace("&r", ChatColor.RESET + "");
-		Colordone = Colordone.replace("&m", ChatColor.STRIKETHROUGH + "");
-		Colordone = Colordone.replace("&o", ChatColor.ITALIC + "");
-		Colordone = Colordone.replace("&k", ChatColor.MAGIC + "");
-		Colordone = Colordone.replace("&l", ChatColor.BOLD + "");
-		Colordone = Colordone.replace("&n", ChatColor.UNDERLINE + "");
-		return Colordone;
+		return ChatColor.translateAlternateColorCodes('&', brut);
 	}
 	public void load(){
 		try {
@@ -221,7 +201,7 @@ public class Messages {
 				if(cs.getString("MONEY_NOW") != null) MONEY_NOW = PNC + cs.getString("MONEY_NOW");
 				if(cs.getString("NO_COMMANDS_IN_GAME") != null) NO_COMMANDS_IN_GAME = PNC + cs.getString("NO_COMMANDS_IN_GAME");
 				if(cs.getString("NOT_ENOUGH_MONEY") != null) NOT_ENOUGH_MONEY = PNC + cs.getString("NOT_ENOUGH_MONEY");
-				if(cs.getString("OTHER_DIE") != null) OTHER_DIE = PNC + cs.getString("OTHER_DIE");
+				if(cs.getString("YOU_DIE") != null) YOU_DIE = PNC + cs.getString("YOU_DIE");
 				if(cs.getString("PERMISSION_DENIED") != null) PERMISSION_DENIED = PNC + cs.getString("PERMISSION_DENIED");
 				if(cs.getString("POWERUP") != null) POWERUP = PNC + cs.getString("POWERUP");
 				if(cs.getString("POWERUP_END") != null) POWERUP_END = PNC + cs.getString("POWERUP_END");
@@ -271,7 +251,7 @@ public class Messages {
 		config.set(section + "MONEY_NOW",MONEY_NOW.replace(PNC, ""));
 		config.set(section + "NO_COMMANDS_IN_GAME",NO_COMMANDS_IN_GAME.replace(PNC, ""));
 		config.set(section + "NOT_ENOUGH_MONEY",NOT_ENOUGH_MONEY.replace(PNC, ""));
-		config.set(section + "OTHER_DIE",OTHER_DIE.replace(PNC, ""));
+		config.set(section + "YOU_DIE",YOU_DIE.replace(PNC, ""));
 		config.set(section + "PERMISSION_DENIED",PERMISSION_DENIED.replace(PNC, ""));
 		config.set(section + "POWERUP",POWERUP.replace(PNC, ""));
 		config.set(section + "POWERUP_END",POWERUP_END.replace(PNC, ""));
@@ -306,5 +286,5 @@ public class Messages {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}	
+	}
 }

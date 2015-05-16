@@ -59,6 +59,9 @@ public class ArenaChrono implements Runnable {
 				}
 			  }
 			  if(ok == 1){
+				  if(arena.getConnectedPlayers() == 0 || !arena.iswaiting || arena.getConnectedPlayers() < arena.startmin) {
+					  return;
+				  }
 				  arena.sendAll(arena.PNC() + ChatColor.GREEN + "The game started !");
 				  arena.startthegame();
 			  }

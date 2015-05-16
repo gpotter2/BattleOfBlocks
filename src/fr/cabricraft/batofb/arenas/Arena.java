@@ -88,6 +88,7 @@ import org.bukkit.metadata.Metadatable;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
@@ -96,6 +97,7 @@ import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.util.Vector;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
+import fr.cabricraft.batofb.BattleOfBlocks.VersionBukkit;
 import fr.cabricraft.batofb.economy.EconomyManager;
 import fr.cabricraft.batofb.kits.BasicKits;
 import fr.cabricraft.batofb.kits.ItemsKit;
@@ -103,6 +105,7 @@ import fr.cabricraft.batofb.kits.Kit;
 import fr.cabricraft.batofb.signs.SignUtility;
 import fr.cabricraft.batofb.util.BlockSave;
 import fr.cabricraft.batofb.util.ParticleEffect;
+import fr.cabricraft.batofb.util.TitleSender;
 import fr.cabricraft.batofb.util.Verified;
 
 public class Arena
@@ -141,7 +144,7 @@ public class Arena
   private HashMap<UUID, String> player_list_counter = new HashMap<UUID, String>();
   private HashMap<UUID, String> player_list_names = new HashMap<UUID, String>();
   private HashMap<UUID, Boolean> player_list_dead = new HashMap<UUID, Boolean>();
-  private HashMap<UUID, Inventory> player_list_inv_storage = new HashMap<UUID, Inventory>();
+  private HashMap<UUID, ItemStack[]> player_list_inv_storage = new HashMap<UUID, ItemStack[]>();
   
   private Scoreboard reset;
   
@@ -219,20 +222,22 @@ private void checkBlocks(){
   }
   
   public boolean isinGame(Player player) {
-    for (Player p : playersingame) {
-      if (player.getUniqueId().equals(p.getUniqueId())) {
-    	  return true;
-      }
-    }
-    return false;
+	  return playersingame.contains(player);
+  }
+  
+  public boolean isDead(Player player){
+	  if(player_list_dead.containsKey(player.getUniqueId())){
+		  return player_list_dead.get(player.getUniqueId());
+	  }
+	  return false;
   }
   
   public void restoreInventory(Player p){
-    	p.getInventory().setContents(player_list_inv_storage.get(p.getUniqueId()).getContents());
+    	p.getInventory().setContents(player_list_inv_storage.get(p.getUniqueId()));
   }
   
   public void saveInventory(Player p){
-	  	player_list_inv_storage.put(p.getUniqueId(), p.getInventory());
+	  	player_list_inv_storage.put(p.getUniqueId(), p.getInventory().getContents());
   }
   
   public int getteam(LivingEntity p){
@@ -462,42 +467,6 @@ public void updateScoreboard(Player p) {
     p.setGameMode(GameMode.SURVIVAL);
   }
   
-  private class DeadTimer implements Runnable {
-
-	  Player p;
-	  
-	  public DeadTimer(Player p){
-		  this.p = p;
-	  }
-	  
-	@Override
-	public void run() {
-		try {
-			Thread.sleep((battleOfBlocks.respawnTime * 1000));
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		if(isstarted && isinGame(p)){
-			int t = getteam(p);
-			makeCompletlyVisible(p);
-			canteleport = true;
-			if (t == 1) {
-				p.teleport(locstartblue);
-			} else if (t == 2) {
-				p.teleport(locstartred);
-			}
-			canteleport = false;
-			player_list_dead.put(p.getUniqueId(), false);
-			clearInventory(p);
-			setStuff(p);
-			settunic(p, false);
-			removePotions(p);
-			p.setHealth(p.getMaxHealth());
-			p.setFoodLevel(20);
-		}
-	}
-  }
-  
   private void makeCompletlyInvisible(Player p){
 	  for(Player pl : playersingame){
 		  pl.hidePlayer(p);
@@ -508,34 +477,44 @@ public void updateScoreboard(Player p) {
 		  pl.showPlayer(p);
 	  }
   }
-  private float toDegree(double angle) {
-	    return (float) Math.toDegrees(angle);
-  }
   private void makeDeadLooking(Player p, Player killer){
-	  p.playNote(p.getLocation(), Instrument.BASS_GUITAR, Note.natural(1, Tone.E));
-	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
-	  p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 100));
-	  p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 100, -100));
-	  if(killer != null){		 
-		    Vector direction = killer.getEyeLocation().toVector().subtract(p.getEyeLocation().toVector()).normalize();
+	  if(killer != null){
+		  	Vector direction = p.getEyeLocation().toVector().subtract(killer.getEyeLocation().toVector()).normalize();
 		    double x = direction.getX();
 		    double y = direction.getY();
 		    double z = direction.getZ();
 		    Location changed = p.getLocation().clone();
-		    changed.setYaw(180 - toDegree(Math.atan2(x, z)));
-		    changed.setPitch(90 - toDegree(Math.acos(y)));
+		    changed.setYaw(180 - (float) Math.toDegrees(Math.atan2(x, z)));
+		    changed.setPitch(90 - (float) Math.toDegrees(Math.acos(y)));
+		    canteleport = true;
 		    p.teleport(changed);
+		    canteleport = false;
+	  }
+	  p.playNote(p.getLocation(), Instrument.BASS_GUITAR, Note.natural(1, Tone.E));
+	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
+	  p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 100));
+	  p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 100, -100));
+	  if(battleOfBlocks.version == VersionBukkit.V1_8){
+		  	try {
+				if(killer != null){
+					TitleSender.sendTitleAndSubTitle(p, "{text:'" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "',color:red}", "{text:'Killed by ',color:yellow,extra:[{text:'" + killer.getName() + "',color:red}]}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
+				} else {
+					TitleSender.sendTitleAndSubTitle(p, "{text:'" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "',color:red}", "{text:'Sucid !',color:yellow}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 	  }
   }
   
-  public void returntothespawn(Player p, boolean die, Player killer){
+  public void returntothespawn(final Player p, boolean die, Player killer){
 	if(battleOfBlocks.respawnTime == 0){
 	    int t = getteam(p);
 	    canteleport = true;
 	    if (t == 1) {
-	      p.teleport(locstartblue);
+	    	p.teleport(locstartblue);
 	    } else if (t == 2) {
-	      p.teleport(locstartred);
+	    	p.teleport(locstartred);
 	    }
 	    removePotions(p);
 	    canteleport = false;
@@ -548,7 +527,7 @@ public void updateScoreboard(Player p) {
 	      if (killer != null) {
 	        p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurate(battleOfBlocks.msg.KILLED_BY, p, killer)));
 	      } else {
-	        p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_DIE));
+	        p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_DIE));
 	      }
 	    }
 	} else {
@@ -563,13 +542,34 @@ public void updateScoreboard(Player p) {
 			        makeDeadLooking(p, killer);
 			        player_list_dead.put(p.getUniqueId(), true);
 		      } else {
-		    	  	p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_DIE));
+		    	  	p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_DIE));
 			        p.sendMessage(PNC() + ChatColor.RED + "Respawn: " + (battleOfBlocks.respawnTime) + " secs !");
 			        makeCompletlyInvisible(p);
 			        makeDeadLooking(p, null);
 			        player_list_dead.put(p.getUniqueId(), true);
 		      }
-		      new Thread(new DeadTimer(p)).start();
+		      new BukkitRunnable() {
+				@Override
+				public void run() {
+					if(isstarted && isinGame(p)){
+						int t = getteam(p);
+						makeCompletlyVisible(p);
+						canteleport = true;
+						if (t == 1) {
+							p.teleport(locstartblue);
+						} else if (t == 2) {
+							p.teleport(locstartred);
+						}
+						canteleport = false;
+						player_list_dead.put(p.getUniqueId(), false);
+						clearInventory(p);
+						setStuff(p);
+						settunic(p, false);
+						removePotions(p);
+						p.setHealth(p.getMaxHealth());
+					}
+				}
+			}.runTaskLater(battleOfBlocks, battleOfBlocks.respawnTime * 20);
 		} else {
 			int t = getteam(p);
 			canteleport = true;
@@ -669,6 +669,7 @@ public void updateScoreboard(Player p) {
   }
   
   private void removePotions(Player p){
+	  p.setFireTicks(0);
 	  for (PotionEffect effect : p.getActivePotionEffects())
 	        p.removePotionEffect(effect.getType());
   }
@@ -925,17 +926,15 @@ private void resetArena(){
     sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurate(battleOfBlocks.msg.OTHER_LEFT_THE_GAME, player, null)));
   }
   
-  private void settalkbarre()
-  {
+  private void settalkbarre(){
     if (battleOfBlocks.barapienabled) {
-      for (int i = 0; i < playersingame.size(); i++)
-      {
-        Player p = (Player)playersingame.get(i);
+      for (int i = 0; i < playersingame.size(); i++){
+        Player p = (Player) playersingame.get(i);
         try {
 	        if (getteam(p) == 1) {
-	          BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(bluelife, life));
+	        	BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(bluelife, life));
 	        } else {
-	          BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(redlife, life));
+	        	BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(redlife, life));
 	        }
         } catch (Exception e) {
 			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
@@ -1012,6 +1011,7 @@ private void resetArena(){
 	        	player.setMaxHealth(20);
 	            player.setHealth(player.getMaxHealth());
 	            player.setFoodLevel(20);
+	            makeCompletlyVisible(player);
 	            setmode(player);
 	            saveInventory(player);
 	            playersingame.add(player);
@@ -1248,7 +1248,7 @@ private void clearInventory(Player p)
   }
   
   @EventHandler
-	public void openInventoriesWhileWaiting(PlayerInteractEvent event){
+	public void manageInteract(PlayerInteractEvent event){
 	  if(iswaiting){
 		  if(event.getItem() != null){
 			  ItemStack is = event.getItem();
@@ -1292,7 +1292,13 @@ private void clearInventory(Player p)
 				    }
 				}
 		  }
-	  
+	  } else if(isstarted){
+		  Player p = event.getPlayer();
+		  if(isinGame(p)){
+			  if(isDead(p)){
+				  event.setCancelled(true);
+			  }
+		  }
 	  }
   }
   
@@ -1466,9 +1472,9 @@ private void clearInventory(Player p)
 						           }
 					              redlife -= 1;
 					              if (redlife == 0) {
-					                stopthegame(2);
-					                event.setCancelled(true);
-					                break;
+					            	  	stopthegame(2);
+					                	event.setCancelled(true);
+					                	break;
 					              }
 					              sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurateLives(battleOfBlocks.msg.RED_LIVES, redlife)));
 					              canteleport = true;
@@ -1538,21 +1544,23 @@ private void clearInventory(Player p)
   }
   
   @EventHandler
-  public void onplayerdie(EntityDamageByEntityEvent event) {
+  public void damageByEntityManager(EntityDamageByEntityEvent event) {
     if (isstarted) {
       if (!(event.getEntity() instanceof Player)) {
         return;
       }
       Player p = (Player) event.getEntity();
       if (isinGame(p)) {
-    	  if(player_list_dead.get(p.getUniqueId()) != null){
-    		  if(player_list_dead.get(p.getUniqueId())){
-    			  event.setCancelled(true);
-    			  return;
-    		  }
+    	  if(isDead(p)){
+			  event.setCancelled(true);
+			  return;
     	  }
           if ((event.getDamager() instanceof Player)) {
             Player d = (Player) event.getDamager();
+            if(isDead(d)){
+  		  		event.setCancelled(true);
+  		  		return;
+      	  	}
             if (getteam(d) == getteam(p)) {
           	  	event.setCancelled(true);
           	  	return;
@@ -1711,7 +1719,6 @@ private void clearInventory(Player p)
 					  p.sendMessage(PNC() + ChatColor.RED + "You haven't choosen any kit for now !");
 				  }
 			  } else if(cancommand(p)) {
-				  setMetadata(p, "cancommand", false, battleOfBlocks);
 			  } else if(!(event.getMessage().startsWith("/batofb"))){
 				  p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NO_COMMANDS_IN_GAME));
 				  event.setCancelled(true);
