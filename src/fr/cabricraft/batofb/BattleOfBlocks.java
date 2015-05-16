@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLClassLoader;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,20 +40,27 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Server;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.conversations.Conversation;
+import org.bukkit.conversations.ConversationAbandonedEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permissible;
+import org.bukkit.permissions.PermissionAttachment;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.InvalidDescriptionException;
 import org.bukkit.plugin.InvalidPluginException;
 import org.bukkit.plugin.Plugin;
@@ -117,6 +125,8 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public int respawnTime = 3;
   public Shop shop;
   
+  public VersionBukkit version;
+  
   public boolean playbydefault = true;
   public boolean opadmin = true;
   public boolean canjoinwhithcommand = true;
@@ -156,6 +166,32 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     }
   }
   
+  public enum VersionBukkit {
+	  V1_6,
+	  V1_7,
+	  V1_8,
+	  OTHER;
+  }
+  
+  private void detectVersion() {
+		String name = Bukkit.getServer().getClass().getPackage().getName();
+		String mcVersion = name.substring(name.lastIndexOf('.') + 1);
+		String[] versions = mcVersion.split("_");
+
+		if (versions[0].equals("v1")) {
+			int minor = Integer.parseInt(versions[1]);
+			if(minor == 6){
+				version = VersionBukkit.V1_6;
+			} else if (minor == 7) {
+				version = VersionBukkit.V1_7;
+			} else if (minor == 8) {
+				version = VersionBukkit.V1_8;
+			} else {
+				version = VersionBukkit.OTHER;
+			}
+		}
+	}
+  
   public void onEnable() {
     try {
       long start_time = System.currentTimeMillis();
@@ -173,6 +209,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     	  return;
       }
       this.batofb_file = getFile();
+      detectVersion();
       
       //LOADING...
       //LOADING ALL OTHER DATAS
@@ -1193,6 +1230,45 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	return null;
 	    }
 	    
+		public Block getTargetBlock(Player p, int lengh){
+	    	if(version == VersionBukkit.V1_7 || version == VersionBukkit.V1_6 || version == VersionBukkit.OTHER){
+	    		@SuppressWarnings("deprecation")
+	    		Block target = p.getTargetBlock((HashSet<Byte>) null, lengh);
+	    		return target;
+	    	} else if(version == VersionBukkit.V1_8) {
+	    		return p.getTargetBlock((Set<Material>) null, lengh);
+	    	}
+	    	return null;
+	    }
+	    
+	    public CommandSender unknownSender(){
+	    	return new ConsoleCommandSender() {
+				public void sendRawMessage(String arg0) {}
+				public boolean isConversing() {return false;}
+				public boolean beginConversation(Conversation arg0) {return false;}
+				public void acceptConversationInput(String arg0) {}
+				public void abandonConversation(Conversation arg0, ConversationAbandonedEvent arg1) {}
+				public void abandonConversation(Conversation arg0) {}
+				public void setOp(boolean arg0) {}
+				public boolean isOp() {return true;}
+				public void removeAttachment(PermissionAttachment arg0) {}
+				public void recalculatePermissions() {}
+				public boolean isPermissionSet(org.bukkit.permissions.Permission arg0) {return true;}
+				public boolean isPermissionSet(String arg0) {return true;}
+				public boolean hasPermission(org.bukkit.permissions.Permission arg0) {return true;}
+				public boolean hasPermission(String arg0) {return true;}
+				public Set<PermissionAttachmentInfo> getEffectivePermissions() {return null;}
+				public PermissionAttachment addAttachment(Plugin arg0, String arg1, boolean arg2, int arg3) {return null;}
+				public PermissionAttachment addAttachment(Plugin arg0, String arg1, boolean arg2) {return null;}
+				public PermissionAttachment addAttachment(Plugin arg0, int arg1) {return null;}
+				public PermissionAttachment addAttachment(Plugin arg0) {return null;}
+				public void sendMessage(String[] arg0) {}
+				public void sendMessage(String arg0) {}
+				public Server getServer() {return battleOfBlocks.getServer();}
+				public String getName() {return "unknownSender";}
+			};
+	    }
+	    
 	    public boolean compilationSuccess(){
 	    	getLogger().info("Checking valuability of the file...");
 	    	String base = "fr.cabricraft.batofb.";
@@ -1226,6 +1302,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "util.ParticleLauncher");
 				Class.forName(base + "util.ReflectionUtils");
 				Class.forName(base + "util.Verified");
+				Class.forName(base + "util.TitleSender");
 				
 				getLogger().info("This file was successfuly compiled !");
 				return true;

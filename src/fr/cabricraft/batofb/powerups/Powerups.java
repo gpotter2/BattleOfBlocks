@@ -21,7 +21,6 @@ package fr.cabricraft.batofb.powerups;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -319,6 +318,9 @@ public class Powerups implements Listener {
 				Player p = (Player) event.getWhoClicked();
 				if(arena.isinGame(p)){
 					if(arena.isstarted){
+						if(arena.isDead(p)){
+							return;
+						}
 						ItemStack is = event.getCurrentItem();
 						if(is == null){
 							return;
@@ -540,6 +542,7 @@ public class Powerups implements Listener {
 												} else {
 													p.chat("/" + capcommand);
 												}
+												arena.setMetadata(p, "cancommand", false, arena.battleOfBlocks);
 											} else {
 												if(capcommand.startsWith("/")){
 													arena.battleOfBlocks.getServer().dispatchCommand(arena.battleOfBlocks.getServer().getConsoleSender(), capcommand.replaceAll("/", ""));
@@ -574,6 +577,9 @@ public class Powerups implements Listener {
 			Player p = (Player) event.getPlayer();
 			if(arena.isinGame(p)){
 				ItemStack is = event.getItem();
+				if(arena.isDead(p)){
+					return;
+				}
 				if(is == null || is.getItemMeta() == null){
 					return;
 				}
@@ -699,13 +705,13 @@ public class Powerups implements Listener {
 								Player damaged = (Player) le;
 								if(arena.isinGame(damaged)){
 									if(arena.getteam(damaged) != arena.getteam(p)){
-										org.bukkit.util.Vector vector = p.getTargetBlock((Set<Material>) null, 100).getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
+										org.bukkit.util.Vector vector = arena.battleOfBlocks.getTargetBlock(p, 100).getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
 										punsh(le, vector);
 										le.damage(10, p);
 										le.setLastDamageCause(new EntityDamageByEntityEvent(p, le, DamageCause.CUSTOM, 10));
 									}
 								} else {
-									org.bukkit.util.Vector vector = p.getTargetBlock((Set<Material>) null, 100).getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
+									org.bukkit.util.Vector vector = arena.battleOfBlocks.getTargetBlock(p, 100).getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
 									punsh(le, vector);
 									le.damage(10, p);
 									le.setLastDamageCause(new EntityDamageByEntityEvent(p, le, DamageCause.CUSTOM, 10));
@@ -743,7 +749,7 @@ public class Powerups implements Listener {
 							 if(itemname.equalsIgnoreCase("FIREBALLS !")){
 								 p.launchProjectile(Fireball.class);
 							 } else if(itemname.equalsIgnoreCase("REDSTONE-POWER !")){
-								 Location l = p.getTargetBlock((Set<Material>) null, 7).getLocation();
+								 Location l = arena.battleOfBlocks.getTargetBlock(p, 7).getLocation();
 								 l.setPitch(p.getLocation().getPitch());
 								 l.setYaw(p.getLocation().getYaw());
 								 arena.canteleport = true;
