@@ -93,6 +93,7 @@ import fr.cabricraft.batofb.util.Messages;
  * This plugin is a free minigame !
  * 
  * @author gpotter2 
+ * @version 2.5.1
  * 
  */
 
