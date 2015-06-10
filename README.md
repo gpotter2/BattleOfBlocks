@@ -1,5 +1,7 @@
 Here is the Official Repository of BattleOfBlocks. Thank to every one that will contribute to the project !
 
+![Alt text](/images_github/liscence.png?raw=true "BattleOfBlocks liscence")
+
 Copyright (C) 2014-2015 Gabriel POTTER (gpotter2)
 
 This program is free software: you can redistribute it and/or modify
