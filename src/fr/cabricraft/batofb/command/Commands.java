@@ -33,6 +33,7 @@ import fr.cabricraft.batofb.Updater;
 import fr.cabricraft.batofb.Updater.UpdateResult;
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.signs.SignUtility;
+import fr.cabricraft.batofb.voting.MapVoting;
 
 public class Commands implements CommandExecutor {
 	
@@ -50,9 +51,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    		sender.sendMessage(PNC + "You don't have permission for that !");
 							return true;
 						}
-			    		try {
-			    			String test = args[0];
-						} catch (Exception e) {
+			    		if(args.length < 1){
 							help(sender, 1);
 							return true;
 						}
@@ -298,7 +297,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    		if(battleOfBlocks.Arenaexist(args[2])){
 				    			battleOfBlocks.getArena(args[2]).pmax = param;
 				    			sender.sendMessage(PNC + ChatColor.GREEN + "Maximal players number set !");
-				    			SignUtility.updatesigns();
+				    			SignUtility.updateSigns();
 				    		} else {
 				    			sender.sendMessage(PNC + "This Arena doesn't exist !");
 				    		}
@@ -330,7 +329,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    			}
 				    			battleOfBlocks.getArena(args[2]).startmin = param;
 				    			sender.sendMessage(PNC + ChatColor.GREEN + "Minimum players number set !");
-				    			SignUtility.updatesigns();
+				    			SignUtility.updateSigns();
 				    		} else {
 				    			sender.sendMessage(PNC + "This Arena doesn't exist !");
 				    		}
@@ -450,7 +449,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    			battleOfBlocks.getArena(args[2]).vip = param;
 				    			if(param != 0) sender.sendMessage(PNC + ChatColor.GREEN + "Number when the VIP will aprear on the signs set !");
 				    			else sender.sendMessage(PNC + ChatColor.GREEN + "Vip desactivated !");
-				    			SignUtility.updatesigns();
+				    			SignUtility.updateSigns();
 				    		} else {
 				    			sender.sendMessage(PNC + "This Arena doesn't exist !");
 				    		}
@@ -472,7 +471,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			    			battleOfBlocks.msg.reloadPNC();
 			    			battleOfBlocks.msg.load();
 			    			sender.sendMessage(PNC + ChatColor.GREEN + "Control name set !");
-			    			SignUtility.updatesigns();
+			    			SignUtility.updateSigns();
 				    		return true;
 				    	} else if(args[0].equalsIgnoreCase("deletearena")){
 				    		try {
@@ -498,6 +497,112 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    			sender.sendMessage(PNC + "     " + ChatColor.DARK_GREEN + ChatColor.BOLD + "Lifes:" + ChatColor.RESET + ChatColor.BLUE + ar.bluelife + ChatColor.RESET + "/" + ChatColor.RED + ar.redlife);
 				    		}
 				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("mapvoterlist")){
+				    		sender.sendMessage(PNC + ChatColor.BLUE + "MapVoter Status:");
+				    		for(MapVoting mv : battleOfBlocks.map_voting){
+				    			sender.sendMessage(PNC + "  -" + ChatColor.GOLD + ChatColor.UNDERLINE + mv.getName() + ":");
+				    			sender.sendMessage(PNC + "     " + ChatColor.DARK_GREEN + ChatColor.BOLD + "Well installed:" + ChatColor.RESET + mv.isCorrect());
+				    			sender.sendMessage(PNC + "     " + ChatColor.DARK_GREEN + ChatColor.BOLD + "Connected:" + ChatColor.RESET + ChatColor.GREEN + mv.connectedPlayers() + "/" + mv.maxplayers);
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("addmapvoter")){
+				    		if(args.length < 2){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		if(!battleOfBlocks.MapVotingExist(args[1])){
+					    		battleOfBlocks.addMapVoting(args[1]);
+				    			sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter created !");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter already exist !");
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("deletemapvoter")){
+				    		if(args.length < 2){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		if(battleOfBlocks.MapVotingExist(args[1])){
+					    		battleOfBlocks.removeMapVoting(args[1]);
+				    			sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter deleted !");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter doesn't exist !");
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("setwaitmapvoter")){
+				    		if(!testPlayer(sender)) return true;
+				    		Player p = (Player) sender;
+				    		if(args.length < 2){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		if(battleOfBlocks.MapVotingExist(args[1])){
+					    		battleOfBlocks.getMapVoting(args[1]).setWait(p.getLocation());
+				    			sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter wait point set on your location!");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter doesn't exist !");
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("setendmapvoter")){
+				    		if(!testPlayer(sender)) return true;
+				    		Player p = (Player) sender;
+				    		if(args.length < 2){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		if(battleOfBlocks.MapVotingExist(args[1])){
+					    		battleOfBlocks.getMapVoting(args[1]).setEnd(p.getLocation());
+				    			sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter end point set on your location!");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter doesn't exist !");
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("setmaxmapvoter")){
+				    		int param;
+				    		if(args.length < 3){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		try {
+				    			param = new Integer(args[1]);
+				    			if(!test_more(param, 2)){
+				    				sender.sendMessage(PNC + "You cannot set a number under 2 !");
+				    				return true;
+				    			}
+							} catch (Exception e) {
+				    			sender.sendMessage(PNC + "First arg must be a number !");
+								return true;
+							}				    		
+				    		if(battleOfBlocks.MapVotingExist(args[2])){
+					    		battleOfBlocks.getMapVoting(args[2]).setMax(param);
+				    			sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter max players set to " + param + " !");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter doesn't exist !");
+				    		}
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("setminmapvoter")){
+				    		int param;
+				    		if(args.length < 3){
+				    			sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
+								return true;
+							}
+				    		try {
+				    			param = new Integer(args[1]);
+				    			if(!test_more(param, 2)){
+				    				sender.sendMessage(PNC + "You cannot set a number under 2 !");
+				    				return true;
+				    			}
+							} catch (Exception e) {
+				    			sender.sendMessage(PNC + "First arg must be a number !");
+								return true;
+							}				    		
+				    		if(battleOfBlocks.MapVotingExist(args[2])){
+					    		battleOfBlocks.getMapVoting(args[2]).setStart(param);
+					    		sender.sendMessage(PNC + ChatColor.GREEN + "MapVoter start min players set to " + param + " !");
+			    			} else {
+				    			sender.sendMessage(PNC + "This MapVoter doesn't exist !");
+				    		}
+				    		return true;
 				    	} else if(args[0].equalsIgnoreCase("saveall")){
 				    		sender.sendMessage(PNC + ChatColor.GREEN + "Saving... !");
 				    		try {
@@ -515,16 +620,16 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 				    		sender.sendMessage(PNC + ChatColor.YELLOW + "Plugin by gpotter2 ! Version: " + battleOfBlocks.getDescription().getVersion());
 				    		return true;
 				    	} else if(args[0].equalsIgnoreCase("update")){
-				    		battleOfBlocks.getLogger().info("Downloading the new version of BattleOfBlocks !");
-				    		Updater up = new Updater(battleOfBlocks, battleOfBlocks.update_id, battleOfBlocks.batofb_file, Updater.UpdateType.DEFAULT, false);
-					        if(up.getResult() == UpdateResult.SUCCESS){
-					        	sender.sendMessage(PNC + ChatColor.GREEN + "Plugin sucessfuly downloaded ! Reloading the plugin...");
-					        	battleOfBlocks.reload(sender);
-					        } else if(up.getResult() == UpdateResult.NO_UPDATE){
-					        	sender.sendMessage(PNC + ChatColor.GREEN + "The plugin already is up to date !");
-					        } else {
-					        	sender.sendMessage(PNC + ChatColor.RED + "Plugin couldn't be downloaded !");
-					        }
+							battleOfBlocks.getLogger().info("Trying to download the new version of BattleOfBlocks !");
+							Updater up = new Updater(battleOfBlocks, battleOfBlocks.update_id, battleOfBlocks.batofb_file, Updater.UpdateType.DEFAULT, false);
+						    if(up.getResult() == UpdateResult.SUCCESS){
+						    	sender.sendMessage(PNC + ChatColor.GREEN + "Plugin sucessfuly downloaded ! Reloading the plugin...");
+						    	battleOfBlocks.reload(sender);
+						    } else if(up.getResult() == UpdateResult.NO_UPDATE){
+						    	sender.sendMessage(PNC + ChatColor.GREEN + "The plugin already is up to date !");
+						    } else {
+						    	sender.sendMessage(PNC + ChatColor.RED + "Plugin couldn't be downloaded !");
+						    }
 				    		return true;
 				    	} else {
 				    		sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");
@@ -595,6 +700,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 								sender.sendMessage(PNC + ChatColor.GREEN + "Usages:");
 								sender.sendMessage(ChatColor.GREEN + "/batofb leave ==> (better to use /leave) Leave the arena");
 								if(battleOfBlocks.canjoinwhithcommand) sender.sendMessage(ChatColor.GREEN + "/batofb join <arena> ==> Join an arena");
+								if(battleOfBlocks.canjoinvotewhithcommand) sender.sendMessage(ChatColor.GREEN + "/batofb joinVote <MapVoter> ==> Join a MapVoter");
 								return true;
 							} else if(args[0].equalsIgnoreCase("admin")){
 								if(battleOfBlocks.cheatadmin == false){
@@ -678,8 +784,16 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks addreward <arena>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Add the Stack that you have in hands to the rewards on winning");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks resetrewards <arena>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Reset all the rewards of this arena");
 			sender.sendMessage(ChatColor.GOLD + "Next page : /battleofblocks 3");
-		} else if(page == 3) {
-			sender.sendMessage("Page 3");
+		} else if(page == 3){
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks addmapvoter <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Create a MapVoter");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks deletemapvoter <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Delete a MapVoter");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setwaitmapvoter <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the wait place of the MapVoter");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setendmapvoter <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the end place of the MapVoter");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setmaxmapvoter <number> <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the max players of the MapVoter");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setminmapvoter <number> <mapvoter>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the start min players of the MapVoter");
+			sender.sendMessage(ChatColor.GOLD + "Next page : /battleofblocks 4");
+		} else if(page == 4) {
+			sender.sendMessage("Page 4");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setvip <number> <arena>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set before the start when the VIP will appear on the signs");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks tooglebreak <arena>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Enable or disable breaking in an arena (auto reset on finish)");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcontrolname <name>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the name of the instance");
@@ -687,7 +801,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks info   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Get the plugin infos !");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks saveall   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Save all the arenas (The arenas are saved automatically during the server's stop)");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks reload   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Reload completly the plugin !");
-			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks update   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Update the plugin !");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks update <password>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Update the plugin with the password found on the latest download page !");
 		}
 		
 	}

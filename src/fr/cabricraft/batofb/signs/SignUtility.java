@@ -34,6 +34,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
 import fr.cabricraft.batofb.arenas.Arena;
+import fr.cabricraft.batofb.voting.MapSign;
+import fr.cabricraft.batofb.voting.MapVoting;
 
 public class SignUtility implements Listener {
 	
@@ -44,9 +46,9 @@ public class SignUtility implements Listener {
 		this.battleOfBlocks = battleOfBlocks;
 	}
 	  
-	public static void updatesigns(){
+	public static void updateSigns(){
 		  List<Location> s_to_remove = new LinkedList<Location>();
-	      for(Location ls : battleOfBlocks.s){
+	      for(Location ls : battleOfBlocks.signs){
 	    	  if(!ls.getBlock().getChunk().isLoaded()){
 	    		  ls.getBlock().getChunk().load();
 	    	  }
@@ -68,14 +70,59 @@ public class SignUtility implements Listener {
 						  s.setLine(1, ChatColor.GREEN + "[Join]");
 					  }
 					  s.update();
+	    		  } else {
+	    			  s_to_remove.add(ls);
 	    		  }
 	    	  } else {
 	    		  s_to_remove.add(ls);
 	    	  }
 	      }
 	      for(Location loc : s_to_remove){
-	    	  battleOfBlocks.s.remove(loc);
+	    	  battleOfBlocks.signs.remove(loc);
 	      }
+	}
+	
+	public static void updateVoteSigns(){
+		List<Location> s_to_remove_vote = new LinkedList<Location>();
+	      for(MapSign ms : battleOfBlocks.signs_vote){
+	    	  Location ls = ms.getLocation();
+	    	  if(!ls.getBlock().getChunk().isLoaded()){
+	    		  ls.getBlock().getChunk().load();
+	    	  }
+	    	  if(ls.getBlock().getType() == Material.WALL_SIGN || ls.getBlock().getType() == Material.SIGN || ls.getBlock().getType() == Material.SIGN_POST) {
+	    		  Sign s = (Sign) ls.getBlock().getState();
+	    		  String name = ms.getMapName();
+	    		  if(battleOfBlocks.MapVotingExist(name)){
+	    			  MapVoting mv = battleOfBlocks.getMapVoting(name);
+	    			  s.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
+	    			  s.setLine(1, ChatColor.GOLD + "[Game]");
+	    			  s.setLine(2, mv.connectedPlayers() + "/" + mv.maxplayers);
+	    			  if(mv.connectedPlayers() >= mv.maxplayers){
+	    				  s.setLine(3, ChatColor.BLUE + "[Full]");
+	    			  } else if(!arenaDispo()){
+	    				  s.setLine(3, ChatColor.RED + "[NO ARENA FREE]");
+	    			  } else {
+	    				  s.setLine(3, ChatColor.GREEN + "[Join]");
+	    			  }
+	    		  } else {
+	    			  s_to_remove_vote.add(ls);
+	    		  }
+	    	  } else {
+	    		  s_to_remove_vote.add(ls);
+	    	  }
+	      }
+	      for(Location loc : s_to_remove_vote){
+	    	  battleOfBlocks.signs.remove(loc);
+	      }
+	}
+	
+	private static boolean arenaDispo(){
+		for(Arena ar : battleOfBlocks.arenas){
+			if(!ar.isstarted && ar.isCorrect()){
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	  @EventHandler
@@ -99,7 +146,7 @@ public class SignUtility implements Listener {
 					  } else if(ar.isstarted) {
 						  event.setLine(1, ChatColor.RED + "[Busy]");
 					  }
-					battleOfBlocks.s.add(event.getBlock().getLocation());
+					battleOfBlocks.signs.add(event.getBlock().getLocation());
 		    	} else {
 					event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] This arena doesn't exist !");
 					event.setLine(1, ChatColor.RED + "ArenaName");
@@ -119,12 +166,31 @@ public class SignUtility implements Listener {
 		    		event.setLine(2, ChatColor.RED + "a dispenser");
 		    		event.setLine(3, ChatColor.RED + "or a dropper !");
 		    	}
+		    } else if(lines[0].equalsIgnoreCase("[batofb-vote]")){
+		    	String name = lines[1];
+		    	if(battleOfBlocks.MapVotingExist(name)){
+			    	  MapVoting mv = battleOfBlocks.getMapVoting(name);
+			    	  event.setLine(0, ChatColor.BLUE + battleOfBlocks.controlname);
+			    	  event.setLine(1, ChatColor.GOLD + "[Game]");
+			    	  event.setLine(2, mv.connectedPlayers() + "/" + mv.maxplayers);
+		  			  if(mv.connectedPlayers() >= mv.maxplayers){
+		  				  event.setLine(3, ChatColor.BLUE + "[Full]");
+		  			  } else if(!arenaDispo()){
+		  				  event.setLine(3, ChatColor.RED + "[NO ARENA FREE]");
+		  			  } else {
+		  				  event.setLine(3, ChatColor.GREEN + "[Join]");
+		  			  }
+		  			  battleOfBlocks.signs_vote.add(new MapSign(event.getBlock().getLocation(), name));
+		    	} else {
+					event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] This MapVoter doesn't exist !");
+					event.setLine(1, ChatColor.RED + "MapVoter Name");
+		    	}
 		    }
 	  }
 	  
-	  public void checkIfExist(Block b){
-		  if(!battleOfBlocks.s.contains(b.getLocation())){
-			  battleOfBlocks.s.add(b.getLocation());
+	  public void checkIfExistSign(Block b){
+		  if(!battleOfBlocks.signs.contains(b.getLocation())){
+			  battleOfBlocks.signs.add(b.getLocation());
 		  }
 	  }
 	  
@@ -144,8 +210,24 @@ public class SignUtility implements Listener {
 			    				} else {
 			    					event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] Vault and an economy plugin must be installed !");
 			    				}
+			    			} else if(lines[1].equalsIgnoreCase(ChatColor.GOLD + "[Game]")){
+			    				MapSign ms = battleOfBlocks.getMapSign(b.getLocation());
+			    				if(ms != null){
+				    				if(ms.isCorrect()){
+				    					MapVoting mv = battleOfBlocks.getMapVoting(ms.getMapName());
+				    					if(mv.isCorrect()){
+				    						mv.addPlayer(event.getPlayer());
+				    					} else {
+				    						event.getPlayer().sendMessage(ChatColor.RED + "[BattleOfBlocks] The waitting point or the starting point is not defined !");
+				    					}
+				    				} else {
+				    					event.getPlayer().sendMessage("This panel doesn't work !");
+				    				}
+			    				} else {
+			    					event.getPlayer().sendMessage("This panel doesn't work !");
+			    				}
 			    			} else {
-			    				checkIfExist(event.getClickedBlock());
+			    				checkIfExistSign(event.getClickedBlock());
 				    			if(battleOfBlocks.Arenaexist(lines[3])) {
 					    			String name = s.getLine(3);
 					    			Arena ar = battleOfBlocks.getArena(name);

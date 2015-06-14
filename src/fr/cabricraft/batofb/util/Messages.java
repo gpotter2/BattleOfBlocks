@@ -32,7 +32,7 @@ public class Messages {
 	public Messages(BattleOfBlocks battleOfBlocks){
 		this.battleOfBlocks = battleOfBlocks;
 		if(battleOfBlocks.controlname == null) battleOfBlocks.controlname = "BattleOfBlocks";
-		this.PNC = ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
+		PNC = ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
 		PERMISSION_DENIED = PNC + "&cYou don't have permission to do that !";
 		KILLED_BY = PNC + "&cYou were killed by %killer% !";
 		YOU_DIE = PNC + "&cYou die !";
@@ -81,10 +81,14 @@ public class Messages {
 	}
 	
 	public void reloadPNC(){
-		this.PNC = ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
+		PNC = ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
 	}
 	
-	public String PNC;
+	public static String PNC(){
+		return PNC;
+	}
+	
+	public static String PNC;
 	public FileConfiguration config;
 	
 	//IN ARENAS
@@ -174,7 +178,7 @@ public class Messages {
 		DoneStructurate = DoneStructurate.replace("%money%", Money);
 		return DoneStructurate;
 	}
-	public String stucturateTime(String ToStructurate, int time){
+	public String structurateTime(String ToStructurate, int time){
 		String DoneStructurate = ToStructurate;
 		DoneStructurate = DoneStructurate.replace("%secs%", String.valueOf(time));
 		return DoneStructurate;

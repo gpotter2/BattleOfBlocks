@@ -237,7 +237,7 @@ private void checkBlocks(){
   }
   
   public void saveInventory(Player p){
-	  	player_list_inv_storage.put(p.getUniqueId(), p.getInventory().getContents());
+	  player_list_inv_storage.put(p.getUniqueId(), p.getInventory().getContents());
   }
   
   public int getteam(LivingEntity p){
@@ -337,7 +337,7 @@ private void checkBlocks(){
 	    isstarted = true;
 	    iswaiting = false;
 	    canteleport = false;
-	    SignUtility.updatesigns();
+	    SignUtility.updateSigns();
   }
   
   private void teleportEnd(int winner){
@@ -452,10 +452,8 @@ public void updateScoreboard(Player p) {
   }
   
   private void resetScoreboard() {
-	  ScoreboardManager manager = Bukkit.getScoreboardManager();
 	  for(Player p : playersingame){
-		  p.setPlayerListName(player_list_names.get(p.getUniqueId()));
-		  p.setScoreboard(manager.getNewScoreboard());
+		  resetScoreboard(p);
 	  }
   }
   
@@ -479,7 +477,7 @@ public void updateScoreboard(Player p) {
   }
   private void makeDeadLooking(Player p, Player killer){
 	  if(killer != null){
-		  	Vector direction = p.getEyeLocation().toVector().subtract(killer.getEyeLocation().toVector()).normalize();
+		  	Vector direction = p.getEyeLocation().toVector().subtract(killer.getEyeLocation().toVector());
 		    double x = direction.getX();
 		    double y = direction.getY();
 		    double z = direction.getZ();
@@ -494,7 +492,7 @@ public void updateScoreboard(Player p) {
 	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
 	  p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 100));
 	  p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 100, -100));
-	  if(battleOfBlocks.version == VersionBukkit.V1_8){
+	  if(BattleOfBlocks.version == VersionBukkit.V1_8){
 		  	try {
 				if(killer != null){
 					TitleSender.sendTitleAndSubTitle(p, "{text:'" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "',color:red}", "{text:'Killed by ',color:yellow,extra:[{text:'" + killer.getName() + "',color:red}]}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
@@ -833,10 +831,45 @@ public void settunic(Player p, boolean fake) {
     } else {
       sendAll(ChatColor.YELLOW + "-------------------------------------------");
     }
-    Thread t = new Thread(new ArenaChrono(this, 2, Winner));
-    t.start();
+    final Arena arena_temp = this;
+    final int option_temp = Winner;
+    Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(battleOfBlocks, new Runnable() {
+    	final Arena arena = arena_temp;
+    	final int option = option_temp;
+		@Override
+		public void run() {
+			arena.finishthegame(option);
+		}
+	}, 200);
     resetScoreboard();
     resetArena();
+  }
+  
+  public BukkitRunnable arenaChrono(final Arena arena, final int option){
+	  return new BukkitRunnable() {
+		int time = BattleOfBlocks.time;
+		@Override
+		public void run() {
+			  int sec = new Integer(time);
+			  for(int i = 0; i < time; i++){
+				  if(arena.battleOfBlocks.stop){
+					  break;
+				  }
+				  arena.updateBarWaitting(sec, time);
+				  if(sec % 10 == 0 || sec < 11) arena.sendAll(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structurateTime(arena.battleOfBlocks.msg.GAME_START_IN_X_SECONDS, sec)));
+				  sec--;
+				  if(arena.getConnectedPlayers() == 0 || !arena.iswaiting || arena.getConnectedPlayers() < arena.startmin) {
+					  arena.updatebarjoin();
+					  break;
+				  }
+				  try {
+					Thread.sleep(1000);
+				  } catch (InterruptedException e) {
+						e.printStackTrace();
+				  }
+			  }
+		}
+	};
   }
   
   public void startthegame(){
@@ -861,7 +894,7 @@ public void finishthegame(int winner) {
     if(winner == 0) sendAll(PNC() + ChatColor.RED + "All the players left the game ! The game was stopped !");
     sendAll(PNC() + ChatColor.GREEN + "Thanks for playing ! Plugin by" + ChatColor.BOLD + " gpotter2  " + ChatColor.RESET + ChatColor.GREEN + "!");
     removeall();
-    SignUtility.updatesigns();
+    SignUtility.updateSigns();
 }
   
 @SuppressWarnings("deprecation")
@@ -916,7 +949,7 @@ private void resetArena(){
     	}
     } else {
     	player.sendMessage(PNC() + ChatColor.GREEN + "Thanks for playing ! Plugin by gpotter2 !");
-    	SignUtility.updatesigns();
+    	SignUtility.updateSigns();
     }
     clearInventory(player);
     restoreInventory(player);
@@ -1017,7 +1050,7 @@ private void resetArena(){
 	            playersingame.add(player);
 	            iswaiting = true;
 	            sendAll(battleOfBlocks.msg.structurate(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_JOIN_THE_GAME), player, null) + ChatColor.GREEN + "(" + getConnectedPlayers() + "/" + pmax + ")");
-	            SignUtility.updatesigns();
+	            SignUtility.updateSigns();
 	            canteleport = true;
 	            player.teleport(waitroom);
 	            canteleport = false;
@@ -1030,8 +1063,19 @@ private void resetArena(){
 	            setInventorySelect(player);
 	            setKitChooser(player);
 	            if (getConnectedPlayers() == startmin) {
-	            	Thread t = new Thread(new ArenaChrono(this, 1, 0));
-	            	t.start();
+	            	arenaChrono(this, 0).runTaskAsynchronously(battleOfBlocks);
+	            	final Arena arena_temp = this;
+	            	Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(battleOfBlocks, new Runnable() {
+	                	final Arena arena = arena_temp;
+	            		@Override
+	            		public void run() {
+	            			if(arena.getConnectedPlayers() == 0 || !arena.iswaiting || arena.getConnectedPlayers() < arena.startmin) {
+	            				  return;
+	            			  }
+	            			  arena.sendAll(arena.PNC() + ChatColor.GREEN + "The game started !");
+	            			  arena.startthegame();
+	            		}
+	            	}, (BattleOfBlocks.time * 20));
 	            }
           } else {
         	  player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.TOO_MANY_PEOPLE));

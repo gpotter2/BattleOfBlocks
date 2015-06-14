@@ -1,6 +1,6 @@
 Here is the Official Repository of BattleOfBlocks. Thank to every one that will contribute to the project !
 
-![Alt text](/images_github/liscence.png?raw=true "BattleOfBlocks liscence")
+![Alt text](http://i.imgur.com/ZotzyhV.png "BattleOfBlocks liscence")
 
 Copyright (C) 2014-2015 Gabriel POTTER (gpotter2)
 

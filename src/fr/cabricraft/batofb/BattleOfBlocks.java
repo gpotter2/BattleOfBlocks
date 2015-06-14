@@ -88,24 +88,27 @@ import fr.cabricraft.batofb.powerups.Powerups;
 import fr.cabricraft.batofb.shop.Shop;
 import fr.cabricraft.batofb.signs.SignUtility;
 import fr.cabricraft.batofb.util.Messages;
+import fr.cabricraft.batofb.voting.MapSign;
+import fr.cabricraft.batofb.voting.MapVoting;
 
 /**
  * This plugin is a free minigame !
  * 
  * @author gpotter2 
- * @version 2.5.1
+ * @version 2.6
  * 
  */
 
 public class BattleOfBlocks extends JavaPlugin implements Listener {
   public List<Arena> arenas = new LinkedList<Arena>();
-  BattleOfBlocks battleOfBlocks;
-  PluginManager pm;
-  int defaultstart = 3;
-  int defaultlives = 10;
-  int defaultmax = 20;
-  int defaultvip = 1;
-  public List<Location> s = new LinkedList<Location>();
+  private BattleOfBlocks battleOfBlocks;
+  private PluginManager pm;
+  private int defaultstart = 3;
+  private int defaultlives = 10;
+  private int defaultmax = 20;
+  private int defaultvip = 1;
+  public List<Location> signs = new LinkedList<Location>();
+  public List<MapSign> signs_vote = new LinkedList<MapSign>();
   public boolean barapienabled;
   public boolean vaultenabled_permissions = false;
   public boolean vaultenabled_economy = false;
@@ -125,18 +128,21 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public Kits kits = null;
   public int respawnTime = 3;
   public Shop shop;
+  public List<MapVoting> map_voting = new LinkedList<MapVoting>();
   
-  public VersionBukkit version;
+  public static VersionBukkit version;
   
   public boolean playbydefault = true;
   public boolean opadmin = true;
   public boolean canjoinwhithcommand = true;
+  public boolean canjoinvotewhithcommand = true;
   
   public boolean stop = false;
   
   private boolean database_errors_notice = false;
   private boolean updatenotice = false;
   private String updatenoticemessage = null;
+  
   public int update_id = 76657;
   public File batofb_file;
   public DatabasesHandler data_handler;
@@ -210,6 +216,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     	  return;
       }
       this.batofb_file = getFile();
+      this.pm = getServer().getPluginManager();
       detectVersion();
       
       //LOADING...
@@ -219,7 +226,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       getInf();
       getMessages();
       addInf();
+      loadMapVoting();
       loadsigns();
+      loadVotesigns();
       //
       shop = new Shop(battleOfBlocks);
       if(check_update){
@@ -238,8 +247,6 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       } catch (IOException e) {
           // Failed to submit the stats :-(
       }
-      
-      pm = getServer().getPluginManager();
       
       this.pm.registerEvents(this, this.battleOfBlocks);
       //DETECTING PLUGINS
@@ -314,7 +321,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	      //
       }
       //RELOADING SIGNS
-      SignUtility.updatesigns();
+      SignUtility.updateSigns();
       //
       //LOADING DONE !!!
       long final_time = System.currentTimeMillis() - start_time;
@@ -323,6 +330,10 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       getLogger().severe("FATAL ERROR ON ENABLING BATTLEOFBLOCKS !");
       e.printStackTrace();
     }
+  }
+  
+  public void registerListener(Listener to_register){
+	  this.pm.registerEvents(to_register, this);
   }
   
   public FileConfiguration conffile(String file){
@@ -641,10 +652,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   }
   
   public void saveall()
-    throws IOException
-  {
+    throws IOException {
     addInf();
-    savesigns();
+    saveSigns();
+    saveVoteSigns();
+    saveMapVoting();
     if(savehandler == null){
 	    for (int i = 0; i < this.arenas.size(); i++) {
 	      Arena ar = (Arena) this.arenas.get(i);
@@ -674,24 +686,46 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     getLogger().info("BattleOfBlocks's configuration writed !");
   }
   
-  public void loadsigns()
-  {
+  public void loadsigns(){
     FileConfiguration config = conffile("saves/signs.yml");
     if (config.getConfigurationSection("Signs") != null) {
       Set<String> keys = config.getConfigurationSection("Signs").getKeys(false);
-      for (String key : keys)
-      {
+      for (String key : keys){
         ConfigurationSection cs = config.getConfigurationSection("Signs." + key);
-        World w = getServer().getWorld(cs.getString("location.world"));
-        if (w == null) {
-          break;
+        if(cs.contains("location.x") && cs.contains("location.y") && cs.contains("location.z") && cs.contains("location.world")){
+	        World w = getServer().getWorld(cs.getString("location.world"));
+	        if (w == null) {
+	          break;
+	        }
+	        Double x = Double.valueOf(cs.getDouble("location.x"));
+	        Double y = Double.valueOf(cs.getDouble("location.y"));
+	        Double z = Double.valueOf(cs.getDouble("location.z"));
+	        
+	        Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue());
+	        signs.add(l);
         }
-        Double x = Double.valueOf(cs.getDouble("location.x"));
-        Double y = Double.valueOf(cs.getDouble("location.y"));
-        Double z = Double.valueOf(cs.getDouble("location.z"));
-        
-        Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue());
-        s.add(l);
+      }
+    }
+  }
+  public void loadVotesigns(){
+    FileConfiguration config = conffile("saves/vote_signs.yml");
+    if (config.getConfigurationSection("VoteSigns") != null) {
+      Set<String> keys = config.getConfigurationSection("VoteSigns").getKeys(false);
+      for (String key : keys){
+        ConfigurationSection cs = config.getConfigurationSection("VoteSigns." + key);
+        if(cs.contains("location.x") && cs.contains("location.y") && cs.contains("location.z") && cs.contains("location.world")){
+	        World w = getServer().getWorld(cs.getString("location.world"));
+	        if (w == null) {
+	          break;
+	        }
+	        Double x = Double.valueOf(cs.getDouble("location.x"));
+	        Double y = Double.valueOf(cs.getDouble("location.y"));
+	        Double z = Double.valueOf(cs.getDouble("location.z"));
+	        String name = cs.getString("name");
+	        
+	        Location l = new Location(w, x.doubleValue(), y.doubleValue(), z.doubleValue());
+	        signs_vote.add(new MapSign(l, name));
+        }
       }
     }
   }
@@ -867,6 +901,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("Configuration.PlayByDefault", Boolean.valueOf(playbydefault));
     conf.set("Configuration.OpAdmin", Boolean.valueOf(opadmin));
     conf.set("Configuration.CanJoinWithCommand", Boolean.valueOf(canjoinwhithcommand));
+    conf.set("Configuration.CanJoinVoteWithCommand", Boolean.valueOf(canjoinvotewhithcommand));
     conf.set("Configuration.CheatAdmin", Boolean.valueOf(cheatadmin));
     conf.set("Configuration.EconomyEnabled", Boolean.valueOf(ecoenabled));
     conf.set("Configuration.ControlName", controlname);
@@ -880,11 +915,81 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     saveConfig();
   }
   
-  public void savesigns() {
+  public void loadMapVoting(){
+	  FileConfiguration conf = conffile("saves/map_voters.yml");
+	  if(conf.getConfigurationSection("MapVoters") == null) return;
+	  for(String key : conf.getConfigurationSection("MapVoters").getKeys(false)){
+		  	ConfigurationSection cs = conf.getConfigurationSection("MapVoters." + key);
+		  	Location wait = null;
+		  	Location end = null;
+		  	int startmin = defaultstart;
+		  	int maxplayers = defaultmax;
+		  	
+		  	if (cs.contains("wait")) {
+			  	World w_wait = getServer().getWorld(cs.getString("wait.world"));
+		        if (w_wait != null) {
+			        Double x = Double.valueOf(cs.getDouble("wait.x"));
+			        Double y = Double.valueOf(cs.getDouble("wait.y"));
+			        Double z = Double.valueOf(cs.getDouble("wait.z"));
+			        Float yaw = Float.valueOf(cs.getInt("wait.yaw"));
+			        Float pitch = Float.valueOf(cs.getInt("wait.pitch"));
+			        wait = new Location(w_wait, x.doubleValue(), y.doubleValue(), z.doubleValue(), yaw, pitch);
+		        }
+		  	}
+		  	if (cs.contains("end")) {
+		        World w_end = getServer().getWorld(cs.getString("end.world"));
+		        if (w_end != null) {
+			        Double x = Double.valueOf(cs.getDouble("end.x"));
+			        Double y = Double.valueOf(cs.getDouble("end.y"));
+			        Double z = Double.valueOf(cs.getDouble("end.z"));
+			        Float yaw = Float.valueOf(cs.getInt("end.yaw"));
+			        Float pitch = Float.valueOf(cs.getInt("end.pitch"));
+			        end = new Location(w_end, x.doubleValue(), y.doubleValue(), z.doubleValue(), yaw, pitch);
+		        }
+		  	}
+		  	if(cs.contains("startmin")) startmin = cs.getInt("startmin");
+		  	if(cs.contains("maxplayers")) maxplayers = cs.getInt("maxplayers");
+		  	MapVoting mv = new MapVoting(battleOfBlocks, key, wait, end, maxplayers, startmin);
+		  	map_voting.add(mv);
+		  	registerListener(mv);
+	  }
+  }
+  
+  public void saveMapVoting(){
+	  	FileConfiguration conf = conffile("saves/map_voters.yml");
+	    conf.set("MapVoters", null);
+	    for (MapVoting mv : map_voting) {
+		      String node = "MapVoters." + mv.getName();
+		      if(mv.getWait() != null){
+			      conf.set(node + ".wait.world", mv.getWait().getWorld().getName());
+			      conf.set(node + ".wait.x", Integer.valueOf(mv.getWait().getBlockX()));
+			      conf.set(node + ".wait.y", Integer.valueOf(mv.getWait().getBlockY()));
+			      conf.set(node + ".wait.z", Integer.valueOf(mv.getWait().getBlockZ()));
+			      conf.set(node + ".wait.yaw", Float.valueOf(mv.getWait().getYaw()));
+			      conf.set(node + ".wait.pitch", Float.valueOf(mv.getWait().getPitch()));
+		      }
+		      if(mv.getEnd() != null){
+			      conf.set(node + ".end.world", mv.getEnd().getWorld().getName());
+			      conf.set(node + ".end.x", Integer.valueOf(mv.getEnd().getBlockX()));
+			      conf.set(node + ".end.y", Integer.valueOf(mv.getEnd().getBlockY()));
+			      conf.set(node + ".end.z", Integer.valueOf(mv.getEnd().getBlockZ()));
+			      conf.set(node + ".end.yaw", Float.valueOf(mv.getEnd().getYaw()));
+			      conf.set(node + ".end.pitch", Float.valueOf(mv.getEnd().getPitch()));
+		      }
+		      conf.set(node + ".startmin", Integer.valueOf(mv.startmin));
+		      conf.set(node + ".maxplayers", Integer.valueOf(mv.maxplayers));
+	    }
+	    try {
+			conf.save(getDataFolder() + "/saves/map_voters.yml");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+  }
+  
+  public void saveSigns() {
 	FileConfiguration conf = conffile("saves/signs.yml");
     conf.set("Signs", null);
-    for (int i = 0; i < s.size(); i++) {
-      Location l = s.get(i);
+    for (Location l : signs) {
       if(l.getBlock().getType() == Material.WALL_SIGN || l.getBlock().getType() == Material.SIGN || l.getBlock().getType() == Material.SIGN_POST) {
 	      String node = "Signs." + l.getWorld().getName() + "_" + l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
 	      conf.set(node + ".location.world", l.getWorld().getName());
@@ -899,6 +1004,26 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 		e.printStackTrace();
 	}
   }
+  public void saveVoteSigns() {
+		FileConfiguration conf = conffile("saves/vote_signs.yml");
+	    conf.set("VoteSigns", null);
+	    for (MapSign ms : signs_vote) {
+	    	  Location l = ms.getLocation();
+		      if(l.getBlock().getType() == Material.WALL_SIGN || l.getBlock().getType() == Material.SIGN || l.getBlock().getType() == Material.SIGN_POST) {
+			      String node = "VoteSigns." + l.getWorld().getName() + "_" + l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
+			      conf.set(node + ".location.world", l.getWorld().getName());
+			      conf.set(node + ".location.x", Integer.valueOf(l.getBlockX()));
+			      conf.set(node + ".location.y", Integer.valueOf(l.getBlockY()));
+			      conf.set(node + ".location.z", Integer.valueOf(l.getBlockZ()));
+			      conf.set(node + ".name", ms.getMapName());
+		      }
+	    }
+	    try {
+			conf.save(getDataFolder() + "/saves/vote_signs.yml");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	  }
   
   public void getInf() {
     FileConfiguration conf = getConfig();
@@ -951,6 +1076,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       if (cs.isSet("CanJoinWithCommand")) {
     	  canjoinwhithcommand = cs.getBoolean("CanJoinWithCommand");
       }
+      if (cs.isSet("CanJoinVoteWithCommand")) {
+    	  canjoinvotewhithcommand = cs.getBoolean("CanJoinVoteWithCommand");
+      }
       if (cs.isSet("ControlName")) {
     	  String temp = cs.getString("ControlName");
     	  if(temp.length() > 15){
@@ -991,14 +1119,74 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     }
   }
   
-  public Arena getArena(String nomarene) {
-    for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena) this.arenas.get(i);
-      if (ar.getName().equals(nomarene)) {
-        return (Arena) this.arenas.get(i);
+  public MapSign getMapSign(Location loc){
+	  for(MapSign ms : signs_vote){
+		  if(ms.getLocation().equals(loc)){
+			  return ms;
+		  }
+	  }
+	  return null;
+  }
+  
+  public void removeMapSign(Location loc){
+	  for(int i = 0; i < signs_vote.size(); i++){
+		  MapSign ms = signs_vote.get(i);
+		  if(ms.getLocation().equals(loc)){
+			  signs_vote.remove(i);
+		  }
+	  }
+  }
+  
+  public void addMapVoting(String name) {
+	    MapVoting mv = new MapVoting(this.battleOfBlocks, name, null, null, this.defaultmax, this.defaultstart);
+	    this.map_voting.add(mv);
+	    registerListener(mv);
+  }
+  
+  
+  public MapVoting getMapVoting(String name){
+	  for (MapVoting mv : map_voting) {
+	      if (mv.getName().equals(name)){
+	    	  return mv;
+	      }
+	    }
+	    return null;
+  }
+  
+  public boolean MapVotingExist(String name){
+	    for (MapVoting mv : map_voting) {
+	      if (mv.getName().equals(name)) {
+	    	  return true;
+	      }
+	    }
+	    return false;
+  }
+  
+  public void removeMapVoting(String name){
+	  for (int i = 0; i < this.map_voting.size(); i++) {
+	      MapVoting mv = this.map_voting.get(i);
+	      if (mv.getName().equals(name)) {
+	    	  this.map_voting.remove(i);
+	      }
+	  }
+  }
+  
+  public Arena getArena(String name) {
+    for (Arena ar : arenas) {
+      if (ar.getName().equals(name)) {
+    	  return ar;
       }
     }
     return null;
+  }
+  
+  public boolean Arenaexist(String name){
+    for (Arena ar : arenas) {
+      if (ar.getName().equals(name)) {
+    	  return true;
+      }
+    }
+    return false;
   }
   
   public void getMessages() {
@@ -1010,34 +1198,22 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    LoadCustomAdd lca = new LoadCustomAdd(this);
 	    lca.load(fc);
   }
-  
+
   public void getKits() {
 	    FileConfiguration fc = conffile("kits.yml");
 	    KitsLoader kl = new KitsLoader(this);
 	    kits = kl.load(fc);
-}
-  
-  public boolean Arenaexist(String nomarene)
-  {
-    for (int i = 0; i < this.arenas.size(); i++) {
-      Arena ar = (Arena)this.arenas.get(i);
-      if (ar.getName().equals(nomarene)) {
-        return true;
-      }
-    }
-    return false;
   }
   
-  public void addarena(String arenaname) {
-    Arena ar = new Arena(arenaname, this.battleOfBlocks, null, null, null, null, new LinkedList<Location>(), new LinkedList<Location>(), this.defaultlives, this.defaultmax, this.defaultstart, this.onwin, this.facteurkills, this.defaultvip, new LinkedList<ItemStack>(), false, false);
+  public void addarena(String name) {
+    Arena ar = new Arena(name, this.battleOfBlocks, null, null, null, null, new LinkedList<Location>(), new LinkedList<Location>(), this.defaultlives, this.defaultmax, this.defaultstart, this.onwin, this.facteurkills, this.defaultvip, new LinkedList<ItemStack>(), false, false);
     Powerups up = new Powerups(ar);
     this.arenas.add(ar);
-    this.pm.registerEvents(ar, this.battleOfBlocks);
-    this.pm.registerEvents(up, this.battleOfBlocks);
+    registerListener(ar);
+    registerListener(up);
   }
   
-  public void removearena(String arenaname)
-  {
+  public void removearena(String arenaname){
     for (int i = 0; i < this.arenas.size(); i++) {
       Arena ar = (Arena)this.arenas.get(i);
       if (ar.getName().equals(arenaname)) {
@@ -1241,7 +1417,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	}
 	    	return null;
 	    }
-	    
+		
 	    public CommandSender unknownSender(){
 	    	return new ConsoleCommandSender() {
 				public void sendRawMessage(String arg0) {}
@@ -1274,10 +1450,10 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    	getLogger().info("Checking valuability of the file...");
 	    	String base = "fr.cabricraft.batofb.";
 			try {
+				//Class tests
 				Class.forName(base + "Metrics");
 				Class.forName(base + "Updater");
 				Class.forName(base + "arenas.Arena");
-				Class.forName(base + "arenas.ArenaChrono");
 				Class.forName(base + "command.Commands");
 				Class.forName(base + "databases.DatabasesHandler");
 				Class.forName(base + "databases.DatabasesUtil");
@@ -1304,6 +1480,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "util.ReflectionUtils");
 				Class.forName(base + "util.Verified");
 				Class.forName(base + "util.TitleSender");
+				Class.forName(base + "voting.MapSign");
+				Class.forName(base + "voting.MapVoting");
+				//
+				//Sub class tests
+				//
 				
 				getLogger().info("This file was successfuly compiled !");
 				return true;

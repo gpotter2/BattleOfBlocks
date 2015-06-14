@@ -274,11 +274,25 @@ public class TitleSender {
 		
 		Field playerConnection = ReflectionUtils.getField("EntityPlayer", PackageType.MINECRAFT_SERVER, false, "playerConnection");
 		Constructor<?> packetConstructor = ReflectionUtils.getConstructor(PackageType.MINECRAFT_SERVER.getClass("PacketPlayOutTitle"));
-		Method getIChatBaseComponent = ReflectionUtils.getMethod("ChatSerializer", PackageType.MINECRAFT_SERVER, "a", String.class);
+		Method getIChatBaseComponent = null;
+		try {
+			getIChatBaseComponent = ReflectionUtils.getMethod("ChatSerializer", PackageType.MINECRAFT_SERVER, "a", String.class);
+		} catch(ClassNotFoundException e){}
+		try {
+			if(getIChatBaseComponent == null) getIChatBaseComponent = ReflectionUtils.getMethod("IChatBaseComponent$ChatSerializer", PackageType.MINECRAFT_SERVER, "a", String.class);
+		} catch(ClassNotFoundException e){
+			
+		}
 		Method getHandle = ReflectionUtils.getMethod("CraftPlayer", PackageType.CRAFTBUKKIT_ENTITY, "getHandle");
 		Method sendPacket = ReflectionUtils.getMethod(playerConnection.getType(), "sendPacket", PackageType.MINECRAFT_SERVER.getClass("Packet"));
 		
-		Class<?> enum_titleaction = PackageType.MINECRAFT_SERVER.getClass("EnumTitleAction");
+		Class<?> enum_titleaction = null;
+		try {
+			enum_titleaction = PackageType.MINECRAFT_SERVER.getClass("EnumTitleAction");
+		} catch(ClassNotFoundException e){}
+		try {
+			if(enum_titleaction == null) enum_titleaction = PackageType.MINECRAFT_SERVER.getClass("PacketPlayOutTitle$EnumTitleAction");
+		} catch(ClassNotFoundException e){}
 		Class<?> IChatBaseComponent_class = PackageType.MINECRAFT_SERVER.getClass("IChatBaseComponent");
 		
 		Object JSONsubtitle_component = null;
