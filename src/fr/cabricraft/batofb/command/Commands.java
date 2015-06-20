@@ -630,6 +630,16 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						    } else {
 						    	sender.sendMessage(PNC + ChatColor.RED + "Plugin couldn't be downloaded !");
 						    }
+						    if(!battleOfBlocks.auto_update) sender.sendMessage(PNC + ChatColor.YELLOW + "You may enable the AutoUpdate system with " + ChatColor.BOLD + "/battleofblocks autoupdate");
+				    		return true;
+				    	} else if(args[0].equalsIgnoreCase("autoupdate")){
+				    		if(battleOfBlocks.auto_update){
+				    			battleOfBlocks.auto_update = false;
+				    			sender.sendMessage(PNC + ChatColor.YELLOW + "AutoUpdate system disabled !");
+				    		} else {
+				    			battleOfBlocks.auto_update = true;
+				    			sender.sendMessage(PNC + ChatColor.YELLOW + "AutoUpdate system enabled !");
+				    		}
 				    		return true;
 				    	} else {
 				    		sender.sendMessage(PNC + "Syntax error, type " + ChatColor.GREEN + "/battleofblocks" + ChatColor.RED + " for help !");

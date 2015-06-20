@@ -95,7 +95,7 @@ import fr.cabricraft.batofb.voting.MapVoting;
  * This plugin is a free minigame !
  * 
  * @author gpotter2 
- * @version 2.6
+ * @version 2.7
  * 
  */
 
@@ -118,6 +118,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   public int facteurkills = 10;
   public boolean cheatadmin = false;
   public boolean check_update = true;
+  public boolean auto_update = false;
   public Economy econ = null;
   public Permission permission = null;
   public Essentials essentials = null;
@@ -230,9 +231,13 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       loadsigns();
       loadVotesigns();
       //
+      if(auto_update){
+    	  getLogger().info("AutoUpdate system activated ! This will update the plugin when possible !");
+      } else {
+    	  getLogger().info("You may enable the AutoUpdate system with '/battleofblocks autoupdate' !");
+      }
       shop = new Shop(battleOfBlocks);
       if(check_update){
-    	  checkUpdate();
     	  new BukkitRunnable() {
 			@Override
 			public void run() {
@@ -406,12 +411,22 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   
   public void checkUpdate(){
 	  if (this.check_update) {
-		  Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
-	      if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
-	      	updatenotice = true;
-	      	updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
-	      	getLogger().info("A new version of the plugin is available: " + updatenoticemessage + " !");
-	      }
+		  if(this.auto_update){
+			  Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.DEFAULT, false);
+			  if(up.getResult() == UpdateResult.SUCCESS){
+				  CommandSender sender = getServer().getConsoleSender();
+				  sender.sendMessage(Messages.PNC() + ChatColor.YELLOW + "You are using the auto updater ! New version downloaded: " + up.getLatestName().replaceAll("BattleOfBlocks", "") + " !");
+				  battleOfBlocks.reload(sender);
+			  }
+		  } else {
+			  Updater up = new Updater(this, this.update_id, this.batofb_file, Updater.UpdateType.NO_DOWNLOAD, false);
+		      if(up.getResult() == UpdateResult.UPDATE_AVAILABLE){
+		      		updatenotice = true;
+		      		updatenoticemessage = up.getLatestName().toLowerCase().replace("battleofblocks", "");
+		      		getLogger().info("A new version of the plugin is available: " + updatenoticemessage + " !");
+		      		getLogger().info("You may enable the AutoUpdate system with '/battleofblocks autoupdate' !");
+		      }
+		  }
 	  }
   }
   
@@ -906,6 +921,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
     conf.set("Configuration.EconomyEnabled", Boolean.valueOf(ecoenabled));
     conf.set("Configuration.ControlName", controlname);
     conf.set("Configuration.CheckUpdate", Boolean.valueOf(check_update));
+    conf.set("Configuration.AutoUpdate", Boolean.valueOf(auto_update));
     conf.set("Configuration.RespawnTimeInSecs", Integer.valueOf(respawnTime));
     conf.set("Configuration.Database.DatabaseName", database_name);
     conf.set("Configuration.Database.MySQL.host", host);
@@ -1090,6 +1106,9 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       }
       if (cs.isSet("CheckUpdate")) {
         check_update = cs.getBoolean("CheckUpdate");
+      }
+      if(cs.isSet("AutoUpdate")){
+    	  auto_update = cs.getBoolean("AutoUpdate");
       }
       if (cs.isSet("EconomyEnabled")) {
     	  ecoenabled = cs.getBoolean("EconomyEnabled");
@@ -1364,6 +1383,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 					        long final_time = System.currentTimeMillis() - start_time;
 					        sender.sendMessage(ChatColor.RED + "[BattleOfBlocks]" + ChatColor.GREEN + " Plugin sucessfuly reloaded ! (Done in " + final_time + "ms)");
 						} catch(Exception e){
+							e.printStackTrace();
 			        		sender.sendMessage(ChatColor.RED + "[BattleOfBlocks] Couldn't reload the plugin");
 			        	}
 					}
