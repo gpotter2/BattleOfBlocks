@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.bukkit.EntityEffect;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -30,6 +31,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import fr.cabricraft.batofb.BattleOfBlocks;
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.util.ParticleEffect.ParticleProperty;
 
@@ -37,11 +39,27 @@ public class ParticleLauncher {
 	
 	Arena ar;
 	
+	public static enum ParticleEffectConnector {
+		EXPLOSION_LARGE,
+		VILLAGER_HAPPY,
+		FLAME,
+		ENCHANTMENT_TABLE,
+		SMOKE_LARGE;
+		
+		public ParticleEffect getParticleEffect(){
+			return ParticleEffect.valueOf(this.toString());
+		}
+		
+		public Particle getParticle(){
+			return Particle.valueOf(this.toString());
+		}
+	}
+	
 	public ParticleLauncher(Arena ar){
 		this.ar = ar;
 	}
 	
-	public List<LivingEntity> launchFirework(Player p, ParticleEffect pe){
+	public List<LivingEntity> launchFirework(Player p, ParticleEffectConnector pe){
 		  Location loc1 = p.getEyeLocation();
 		  Location loc2 = ar.battleOfBlocks.getTargetBlock(p, 100).getLocation();
 		  List<Location> list = l_straight(loc1, loc2);
@@ -69,11 +87,16 @@ public class ParticleLauncher {
 					e.printStackTrace();
 				}
 		  }
-		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 2.0F);
-		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.5F);
-		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.4F);
-		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.3F);
-		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.2F);
+//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 2.0F);
+//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.5F);
+//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.4F);
+//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.3F);
+//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.2F);
+		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 2.0F);
+		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.5F);
+		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.4F);
+		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.3F);
+		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.2F);
 		  for(LivingEntity le : hitted){
 			  le.playEffect(EntityEffect.HURT);
 		  }
@@ -167,13 +190,22 @@ public class ParticleLauncher {
 		return new Location(loc.getWorld(), randomBoolean() ? loc.getX() - nbrX : loc.getX() + nbrX, randomBoolean() ? loc.getY() - nbrY : loc.getY() + nbrY, randomBoolean() ? loc.getZ() - nbrZ : loc.getZ() + nbrZ);
 	}
 	
-	private void playParticle(Vector direction, Location loc, ParticleEffect pe) {
-		if(pe.hasProperty(ParticleProperty.DIRECTIONAL)){
-			ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
-			ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
+	public void playParticle(Vector direction, Location loc, ParticleEffectConnector pec) {
+		if(BattleOfBlocks.version.isRecent()){
+			Particle pe = pec.getParticle();
+			for(Player p : ar.playersingame){
+				p.spawnParticle(pe, around(loc), 2, 100, 100, 100);
+				p.spawnParticle(pe, around(loc), 2, 100, 100, 100);
+			}
 		} else {
-			ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
-			ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
+			ParticleEffect pe = pec.getParticleEffect();
+			if(pe.hasProperty(ParticleProperty.DIRECTIONAL)){
+				ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
+				ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
+			} else {
+				ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
+				ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
+			}
 		}
     }
 }

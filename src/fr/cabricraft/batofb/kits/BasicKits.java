@@ -24,6 +24,7 @@ import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -33,6 +34,7 @@ import org.bukkit.metadata.Metadatable;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
 import fr.cabricraft.batofb.arenas.Arena;
+import fr.cabricraft.batofb.powerups.Powerups.PowerKit;
 
 public class BasicKits {
 	
@@ -61,49 +63,48 @@ public class BasicKits {
 	}
 	
 	private void setRandomClass(Player p){
-		List<String> l = new LinkedList<String>();
-		l.add("Mage");
-		if(hasBoughtKit(p, "Spy")) l.add("Spy");
-		if(hasBoughtKit(p, "Phoenix")) l.add("Phoenix");
-		if(hasBoughtKit(p, "Shamen")) l.add("Shamen");
-		if(hasBoughtKit(p, "Healer")) l.add("Healer");
-		if(hasBoughtKit(p, "Troll")) l.add("Troll");
-		if(hasBoughtKit(p, "Fury")) l.add("Fury");
-		String kit;
+		List<PowerKit> l = new LinkedList<PowerKit>();
+		l.add(PowerKit.MAGE);
+		if(hasBoughtKit(p, "Spy")) l.add(PowerKit.SPY);
+		if(hasBoughtKit(p, "Phoenix")) l.add(PowerKit.PHOENIX);
+		if(hasBoughtKit(p, "Shamen")) l.add(PowerKit.SHAMEN);
+		if(hasBoughtKit(p, "Healer")) l.add(PowerKit.HEALER);
+		if(hasBoughtKit(p, "Troll")) l.add(PowerKit.TROLL);
+		if(hasBoughtKit(p, "Fury")) l.add(PowerKit.FURY);
+		PowerKit kit;
 		if(l.size() == 1){
 			kit = l.get(0);
 		} else {
 			int nombreAleatoire = (int)(Math.random() * (l.size()));
 			kit = l.get(nombreAleatoire);
 		}
-		arena.p_kits.put(p.getUniqueId(), kit);
+		arena.player_list_powerkit.put(p.getUniqueId(), kit);
 	}
 	
 	@SuppressWarnings("deprecation")
 	public List<ItemStack> getItemsPlayer(Player p){
-		if(arena.getKitName(p) == null){
+		if(arena.getKitName(p) == PowerKit.RANDOM){
 			setRandomClass(p);
 		}
 		List<ItemStack> list = new LinkedList<ItemStack>();
-		String kp = arena.getKitName(p);
-		list.add(getIS(Material.IRON_SWORD, "SWORD", "Funny no ?", p));
-	    if(kp.equalsIgnoreCase("Mage")){
+		PowerKit kp = arena.getKitName(p);
+		ItemStack d_is = getIS(Material.WOOD_SWORD, "SWORD", "Funny no ?", p);
+		d_is.addEnchantment(Enchantment.DURABILITY, 3);
+		list.add(d_is);
+	    if(kp == PowerKit.MAGE){
 	    	list.add(getIS(Material.BONE, "Flash !", "Flash players !", p));
-	    } else if(kp.equalsIgnoreCase("Spy")){
+	    } else if(kp == PowerKit.SPY){
 	    	list.add(getIS(Material.INK_SACK, "Invisibility !", "Pouf !", p));
-	    } else if(kp.equalsIgnoreCase("Phoenix")){
+	    } else if(kp == PowerKit.PHOENIX){
 	    	list.add(getIS(Material.BLAZE_ROD, "Inferno !", "Burn !!", p));
-	    } else if(kp.equalsIgnoreCase("Shamen")){
+	    } else if(kp == PowerKit.SHAMEN){
 	    	list.add(getIS(Material.VINE, "Nature protection !", "Create a wall !", p));
-	    } else if(kp.equalsIgnoreCase("Healer")){
+	    } else if(kp == PowerKit.HEALER){
 	    	list.add(getIS(Material.STICK, "Healer !", "Heal people !", p));
-	    } else if(kp.equalsIgnoreCase("Troll")){
+	    } else if(kp == PowerKit.TROLL){
 	    	list.add(getIS(new ItemStack(Material.INK_SACK, 1, (short)0, DyeColor.RED.getData()), "Team color !", "Change your team color !", p));
-	    } else if(kp.equalsIgnoreCase("Fury")){
+	    } else if(kp == PowerKit.FURY){
 	    	list.add(getIS(Material.TNT, "Fury !", "Punsh players !", p));
-	    }
-	    if(list.isEmpty()){
-	    	return null;
 	    }
 	    return list;
 	}

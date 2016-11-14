@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import me.confuser.barapi.BarAPI;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -51,7 +50,7 @@ import fr.cabricraft.batofb.util.Verified;
 
 public class MapVoting implements Listener, Verified {
 	
-	private BattleOfBlocks plugin = null;
+	private BattleOfBlocks battleofblocks = null;
 	private Location wait = null;
 	private Location end = null;
 	public int maxplayers = 0;
@@ -71,9 +70,9 @@ public class MapVoting implements Listener, Verified {
 	private HashMap<UUID, String> players_votes = new HashMap<UUID, String>();
 	private HashMap<UUID, Boolean> players_already_voted = new HashMap<UUID, Boolean>();
 	
-	public MapVoting(BattleOfBlocks plugin, String name, Location wait, Location end, int maxplayers, int startmin){
+	public MapVoting(BattleOfBlocks battleofblocks, String name, Location wait, Location end, int maxplayers, int startmin){
 		thisinstance = this;
-		this.plugin = plugin;
+		this.battleofblocks = battleofblocks;
 		this.name = name;
 		this.end = end;
 		this.wait = wait;
@@ -121,12 +120,20 @@ public class MapVoting implements Listener, Verified {
 		return reset;
 	}
 	
+	public void teleportPlayer(Player p, Location to){
+		  canteleport = true;
+		  Chunk c = to.getChunk();
+		  if(!c.isLoaded()) to.getChunk().load();
+		  p.teleport(to);
+		  canteleport = false;
+	  }
+	
 	private int getArenaVoteNumber(String arena_name){
 		int count = 0;
 		for(Iterator<Entry<UUID, String>> it = players_votes.entrySet().iterator(); it.hasNext();){
     		Entry<UUID, String> entry = it.next();
     		UUID uuid = entry.getKey();
-    		if(plugin.getServer().getOfflinePlayer(uuid).isOnline()){
+    		if(battleofblocks.getServer().getOfflinePlayer(uuid).isOnline()){
 				if(entry.getValue().equals(arena_name)){
 					count++;
 				}
@@ -140,7 +147,7 @@ public class MapVoting implements Listener, Verified {
 		for(Iterator<Entry<UUID, String>> it = players_votes.entrySet().iterator(); it.hasNext();){
     		Entry<UUID, String> entry = it.next();
     		UUID uuid = entry.getKey();
-    		if(plugin.getServer().getOfflinePlayer(uuid).isOnline()){
+    		if(battleofblocks.getServer().getOfflinePlayer(uuid).isOnline()){
     			String name = entry.getValue();
     			if(arenas_votes_list_temp.containsKey(name)){
     				arenas_votes_list_temp.put(name, (arenas_votes_list_temp.get(name) + 1));
@@ -182,23 +189,18 @@ public class MapVoting implements Listener, Verified {
 	}
 	
 	private void updateBar(){
-		if(plugin.barapienabled){
-			float percent;
-			if(connectedPlayers() > startmin){
-				percent = 100F;
-			} else {
-				percent = (connectedPlayers()*100)/startmin;
-			}
-			for(Player player : players){
-				BarAPI.setMessage(player, fr.cabricraft.batofb.util.Messages.PNC() + ChatColor.GREEN + connectedPlayers() + "/" + maxplayers + ", " + plugin.msg.NEED + " " + startmin, percent);
-			}
+		float percent;
+		if(connectedPlayers() > startmin){
+			percent = 100F;
+		} else {
+			percent = (connectedPlayers()*100)/startmin;
 		}
+		String message = fr.cabricraft.batofb.util.Messages.PNC() + ChatColor.GREEN + connectedPlayers() + "/" + maxplayers + ", " + battleofblocks.msg.NEED + " " + startmin;
+		battleofblocks.bb_connect.updateBar(players, "voting", message, percent);
 	}
 	
 	private void removeBar(Player player){
-		if(plugin.barapienabled){
-			BarAPI.removeBar(player);
-		}
+		battleofblocks.bb_connect.removeBar(players, "voting");
 	}
 	
 	  private void updateScoreboards(){
@@ -230,9 +232,9 @@ public class MapVoting implements Listener, Verified {
 	@SuppressWarnings("deprecation")
 	private Inventory getInv(Player p){
 		Inventory inv;
-		inv = Bukkit.createInventory(p,getInvSize(plugin.arenas.size()),ChatColor.GREEN + "BattleOfBlocks Map Voting !");
+		inv = Bukkit.createInventory(p,getInvSize(battleofblocks.arenas.size()),ChatColor.GREEN + "BattleOfBlocks Map Voting !");
 		inv.setMaxStackSize(999);
-		for(Arena ar : plugin.arenas){
+		for(Arena ar : battleofblocks.arenas){
 			if(ar.isCorrect() && !ar.isstarted){
 				arena_used.add(ar);
 				MaterialData data = new MaterialData(Material.WOOL);
@@ -245,8 +247,8 @@ public class MapVoting implements Listener, Verified {
 	
 	@SuppressWarnings("deprecation")
 	public void addPlayer(Player player){
-		player.sendMessage(plugin.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.GREEN + "You joined the vote !");
-		player.teleport(wait);
+		player.sendMessage(battleofblocks.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.GREEN + "You joined the vote !");
+		teleportPlayer(player, wait);
 		player.setGameMode(GameMode.SURVIVAL);
 		player.setScoreboard(reset());
 		removeBar(player);
@@ -254,7 +256,7 @@ public class MapVoting implements Listener, Verified {
 		players_inv.put(player.getUniqueId(), player.getInventory().getContents());
 		players_already_voted.put(player.getUniqueId(), false);
 		SignUtility.updateVoteSigns();
-		sendAll(plugin.msg.structurate(plugin.msg.putColor(plugin.msg.OTHER_JOIN_THE_GAME), player, null) + ChatColor.GREEN + "" + connectedPlayers() + "/" + maxplayers + " (needed:" + startmin + ")");
+		sendAll(battleofblocks.msg.structurate(battleofblocks.msg.putColor(battleofblocks.msg.OTHER_JOIN_THE_GAME), player, null) + ChatColor.GREEN + "" + connectedPlayers() + "/" + maxplayers + " (needed:" + startmin + ")");
 		updateScoreboards();
 		updateBar();
 		player.getInventory().clear();
@@ -271,7 +273,7 @@ public class MapVoting implements Listener, Verified {
 							return;
 						}
 						if(sec % 10 == 0 || sec < 11) {
-							mv.sendAll(plugin.msg.putColor(plugin.msg.structurateTime(plugin.msg.GAME_START_IN_X_SECONDS, sec)));
+							mv.sendAll(battleofblocks.msg.putColor(battleofblocks.msg.structurateTime(battleofblocks.msg.GAME_START_IN_X_SECONDS, sec)));
 						}
 						try {
 							Thread.sleep(1000);
@@ -284,16 +286,16 @@ public class MapVoting implements Listener, Verified {
 					}
 					startTheGame();
 				}
-			}.runTask(plugin);
+			}.runTask(battleofblocks);
 		}
 	}
 	
 	public void removePlayer(Player player){
-		player.sendMessage(plugin.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "You left the vote !");
+		player.sendMessage(battleofblocks.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "You left the vote !");
 		players.remove(player);
 		SignUtility.updateVoteSigns();
-		sendAll(plugin.msg.structurate(plugin.msg.putColor(plugin.msg.OTHER_LEFT_THE_GAME), player, null) + ChatColor.GREEN + "" + connectedPlayers() + "/" + maxplayers + " (needed:" + startmin + ")");
-		player.teleport(end);
+		sendAll(battleofblocks.msg.structurate(battleofblocks.msg.putColor(battleofblocks.msg.OTHER_LEFT_THE_GAME), player, null) + ChatColor.GREEN + "" + connectedPlayers() + "/" + maxplayers + " (needed:" + startmin + ")");
+		teleportPlayer(player, end);
 		player.getInventory().setContents(players_inv.get(player.getUniqueId()));
 		updateScoreboards();
 		updateBar();
@@ -310,7 +312,7 @@ public class MapVoting implements Listener, Verified {
 			Arena best_arena = getBestArena();
 			if(best_arena == null){
 				continu = false;
-				sendAll(plugin.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "No arenas are free !");
+				sendAll(battleofblocks.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "No arenas are free !");
 			}
 			if(best_arena.isCorrect() && !best_arena.isstarted){
 				continu = false;
@@ -345,7 +347,7 @@ public class MapVoting implements Listener, Verified {
     		if(number == best){
     			List<String> get_arenas = getVoteNumberArena(number);
     			for(String s : get_arenas){
-    				Arena ar = plugin.getArena(s);
+    				Arena ar = battleofblocks.getArena(s);
 	    			if(!best_arenas.contains(ar)){
 	    				best_arenas.add(ar);
 	    			}
@@ -374,7 +376,7 @@ public class MapVoting implements Listener, Verified {
 				  removePlayer(p);
 				  event.setCancelled(true);
 			} else {
-				p.sendMessage(plugin.msg.putColor(plugin.msg.NO_COMMANDS_IN_GAME));
+				p.sendMessage(battleofblocks.msg.putColor(battleofblocks.msg.NO_COMMANDS_IN_GAME));
 				event.setCancelled(true);
 			}
 		}
@@ -445,10 +447,10 @@ public class MapVoting implements Listener, Verified {
 							players_votes.put(p.getUniqueId(), arena_name);
 							players_already_voted.put(p.getUniqueId(), true);
 							updateScoreboards();
-							p.sendMessage(plugin.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.GREEN + "You voted for '" + arena_name + "' !");
+							p.sendMessage(battleofblocks.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.GREEN + "You voted for '" + arena_name + "' !");
 							p.closeInventory();
 						} else {
-							p.sendMessage(plugin.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "You already voted !");
+							p.sendMessage(battleofblocks.msg.putColor(fr.cabricraft.batofb.util.Messages.PNC()) + ChatColor.RED + "You already voted !");
 							p.closeInventory();
 						}
 					}
@@ -468,9 +470,7 @@ public class MapVoting implements Listener, Verified {
 	  @EventHandler
 	  public void onbreak(BlockBreakEvent event){
 		  if (players.contains(event.getPlayer())){
-			  canteleport = true;
-			  event.getPlayer().teleport(tronc(event.getPlayer().getLocation()));
-			  canteleport = false;
+			  teleportPlayer(event.getPlayer(),tronc(event.getPlayer().getLocation()));
 			  event.setCancelled(true);
 		  }
 	  }

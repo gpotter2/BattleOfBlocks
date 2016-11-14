@@ -23,10 +23,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
-import me.confuser.barapi.BarAPI;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
@@ -36,7 +35,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Note;
 import org.bukkit.Note.Tone;
-import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.Dispenser;
 import org.bukkit.block.Sign;
@@ -102,9 +100,11 @@ import fr.cabricraft.batofb.economy.EconomyManager;
 import fr.cabricraft.batofb.kits.BasicKits;
 import fr.cabricraft.batofb.kits.ItemsKit;
 import fr.cabricraft.batofb.kits.Kit;
+import fr.cabricraft.batofb.powerups.Powerups.PowerKit;
 import fr.cabricraft.batofb.signs.SignUtility;
 import fr.cabricraft.batofb.util.BlockSave;
-import fr.cabricraft.batofb.util.ParticleEffect;
+import fr.cabricraft.batofb.util.ParticleLauncher;
+import fr.cabricraft.batofb.util.ParticleLauncher.ParticleEffectConnector;
 import fr.cabricraft.batofb.util.TitleSender;
 import fr.cabricraft.batofb.util.Verified;
 
@@ -144,12 +144,11 @@ public class Arena
   private HashMap<UUID, String> player_list_counter = new HashMap<UUID, String>();
   private HashMap<UUID, String> player_list_names = new HashMap<UUID, String>();
   private HashMap<UUID, Boolean> player_list_dead = new HashMap<UUID, Boolean>();
+  public HashMap<UUID, PowerKit> player_list_powerkit = new HashMap<UUID, PowerKit>();
   private HashMap<UUID, ItemStack[]> player_list_inv_storage = new HashMap<UUID, ItemStack[]>();
   
   private Scoreboard reset;
-  
-  public HashMap<UUID, String> p_kits = new HashMap<UUID, String>();
-  
+    
   public Arena(String arenaname, BattleOfBlocks plug, Location locstartred, Location locstartblue, Location locend, Location waitroom, List<Location> vred, List<Location> vblue, int life, int pmax, int pmin, int onwin, int facteurkills, int vip, List<ItemStack> reward, boolean canbuild, boolean canbreak) {
     this.arenaname = arenaname;
     this.battleOfBlocks = plug;
@@ -172,6 +171,14 @@ public class Arena
     this.canbreak = canbreak;
     this.reset = Bukkit.getScoreboardManager().getNewScoreboard();
     checkBlocks();
+  }
+  
+  public void teleportPlayer(Player p, Location to){
+	  canteleport = true;
+	  Chunk c = to.getChunk();
+	  if(!c.isLoaded()) to.getChunk().load();
+	  p.teleport(to);
+	  canteleport = false;
   }
   
   @SuppressWarnings("deprecation")
@@ -301,10 +308,15 @@ private void checkBlocks(){
   }
   
   private void teleportStart(){
-		for (int i = 0; i < playersingame.size(); i++){
-		      Player pp = (Player)playersingame.get(i);
+	    battleOfBlocks.bb_connect.removeBar(playersingame, "waiting");
+		for (Player pp : playersingame){
 		      if (getteam(pp) == 0) {
 		    	  chooseteamh(pp);
+		      }
+		      if(getteam(pp) == 1){
+		    	  battleOfBlocks.bb_connect.addPlayer(pp, "ingameblue");
+		      } else if (getteam(pp) == 2){
+		    	  battleOfBlocks.bb_connect.addPlayer(pp, "ingamered");
 		      }
 	    }
 	    checkteam();
@@ -315,18 +327,17 @@ private void checkBlocks(){
 	    locstartred.getWorld().setStorm(false);
 	    locstartred.getWorld().setThundering(false);
 	    canchangeweather = true;
-	    canteleport = true;
 	    for (int i = 0; i < playersingame.size(); i++){
 		      Player pp = (Player)playersingame.get(i);
 		      player_list_names.put(pp.getUniqueId(), pp.getPlayerListName());
 		      int t = getteam(pp);
 		      player_list_kills.put(pp.getUniqueId(), 0);
 		      if (t == 1) {
-		    	  	pp.teleport(locstartblue);
+		    	  	teleportPlayer(pp, locstartblue);	
 		        	if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.BLUE + pp.getName());
 		        	pp.setCustomNameVisible(true);
 		      } else if (t == 2) {
-		    	  	pp.teleport(locstartred);
+		    	  	teleportPlayer(pp, locstartred);
 		    	  	if(pp.getName().length() <= 14) pp.setPlayerListName(ChatColor.RED + pp.getName());
 		    	  	pp.setCustomNameVisible(true);
 		      }
@@ -336,25 +347,17 @@ private void checkBlocks(){
 	    }
 	    isstarted = true;
 	    iswaiting = false;
-	    canteleport = false;
 	    SignUtility.updateSigns();
   }
   
   private void teleportEnd(int winner){
+	  battleOfBlocks.bb_connect.removeAll(playersingame);
       for (int i = 0; i < playersingame.size(); i++) {
         Player pp = (Player) playersingame.get(i);
-        pp.teleport(locend);
+        teleportPlayer(pp, locend);
         removeCountDownAndPotions(pp);
         clearInventory(pp);
         resetScoreboard(pp);
-        if (battleOfBlocks.barapienabled) {
-        	try {
-        		BarAPI.removeBar(pp);
-        	} catch (Exception e) {
-    			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-    			battleOfBlocks.barapienabled = false;
-    		}
-        }
         restoreInventory(pp);
         removeLastEssentialsLocation(pp);
         if(getteam(pp) == winner) {
@@ -484,9 +487,7 @@ public void updateScoreboard(Player p) {
 		    Location changed = p.getLocation().clone();
 		    changed.setYaw(180 - (float) Math.toDegrees(Math.atan2(x, z)));
 		    changed.setPitch(90 - (float) Math.toDegrees(Math.acos(y)));
-		    canteleport = true;
-		    p.teleport(changed);
-		    canteleport = false;
+		    teleportPlayer(p, changed);
 	  }
 	  p.playNote(p.getLocation(), Instrument.BASS_GUITAR, Note.natural(1, Tone.E));
 	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
@@ -508,14 +509,12 @@ public void updateScoreboard(Player p) {
   public void returntothespawn(final Player p, boolean die, Player killer){
 	if(battleOfBlocks.respawnTime == 0){
 	    int t = getteam(p);
-	    canteleport = true;
 	    if (t == 1) {
-	    	p.teleport(locstartblue);
+	    	teleportPlayer(p, locstartblue);
 	    } else if (t == 2) {
-	    	p.teleport(locstartred);
+	    	teleportPlayer(p, locstartred);
 	    }
 	    removePotions(p);
-	    canteleport = false;
 	    clearInventory(p);
 	    setStuff(p);
 	    settunic(p, false);
@@ -552,13 +551,11 @@ public void updateScoreboard(Player p) {
 					if(isstarted && isinGame(p)){
 						int t = getteam(p);
 						makeCompletlyVisible(p);
-						canteleport = true;
 						if (t == 1) {
-							p.teleport(locstartblue);
+							teleportPlayer(p, locstartblue);
 						} else if (t == 2) {
-							p.teleport(locstartred);
+							teleportPlayer(p, locstartred);
 						}
-						canteleport = false;
 						player_list_dead.put(p.getUniqueId(), false);
 						clearInventory(p);
 						setStuff(p);
@@ -570,34 +567,46 @@ public void updateScoreboard(Player p) {
 			}.runTaskLater(battleOfBlocks, battleOfBlocks.respawnTime * 20);
 		} else {
 			int t = getteam(p);
-			canteleport = true;
 		    if (t == 1) {
-		      p.teleport(locstartblue);
+		    	teleportPlayer(p, locstartblue);
 		    } else if (t == 2) {
-		      p.teleport(locstartred);
+		    	teleportPlayer(p, locstartred);
 		    }
-		    canteleport = false;
+		    
 		}
 	}
   }
   
-  public void updateBarWaitting(int time_restant, int time_finish){
-	  if(battleOfBlocks.barapienabled){
-		  for(Player p : playersingame){
-		  	String message = PNC() + ChatColor.WHITE + ": " + ChatColor.GOLD + time_restant;
-			Float percent = 100 - (pourcentage((time_finish - time_restant), time_finish));
-			try {
-				BarAPI.setMessage(p, message, percent);
-			} catch (Exception e) {
-				Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-				battleOfBlocks.barapienabled = false;
-				break;
+  public void barCountDown(final Player p){
+	  new BukkitRunnable() {
+		  int time = getKitName(p).getTime();
+		  int l_time = time+1;
+		  Player l_p = p;
+		  int spent_time = 0;
+			@Override
+			public void run() {
+				spent_time++;
+				if(!isstarted && !isinGame(p)) {
+					this.cancel();
+					return;
+				}
+				if(spent_time >= l_time){
+					setXP(l_p, 0, 0);
+					this.cancel();
+				} else {
+					setXP(l_p, spent_time, l_time);
+				}
 			}
-		  }
-	  }
+	}.runTaskTimerAsynchronously(battleOfBlocks, 0, 20);
   }
   
-  private void InstaureCountDown(Player p, List<ItemStack> l){
+  public void updateBarWaitting(int time_restant, int time_finish){
+	  String message = PNC() + ChatColor.WHITE + ": " + ChatColor.GOLD + time_restant;
+	  Float percent = 100 - (pourcentage((time_finish - time_restant), time_finish));
+	  battleOfBlocks.bb_connect.updateBar(playersingame, "waiting", message, percent);
+  }
+  
+  private void InstaureCountDown(final Player p, List<ItemStack> l){
 	  long now = System.currentTimeMillis();
 	  String to_set = null;
 	  for(ItemStack is : l){
@@ -608,6 +617,7 @@ public void updateScoreboard(Player p) {
 			  to_set = to_set + "@" + itemname + "#" + now;
 		  }
 	  }
+	  barCountDown(p);
 	  player_list_counter.put(p.getUniqueId(), to_set);
   }
   
@@ -672,7 +682,21 @@ public void updateScoreboard(Player p) {
 	        p.removePotionEffect(effect.getType());
   }
   
-  public void setCountDown(Player p, String name) {
+  private void setXP(Player p, int now, int total){
+	  if(p == null) return;
+	  if(now != 0 && total != 0){
+		  float t_now = now;
+		  float t_tot = total;
+		  float percent = t_now/t_tot*1F;
+		  p.setLevel((int) (total-now));
+		  p.setExp(percent);
+	  } else {
+		  p.setLevel(0);
+		  p.setExp(1F);
+	  }
+  }
+  
+  public void setCountDown(final Player p, String name) {
 	  long now = System.currentTimeMillis();
 	  String get = player_list_counter.get(p.getUniqueId());
 	  String[] gets = get.split("@");
@@ -699,9 +723,10 @@ public void updateScoreboard(Player p) {
 		  }
 	  }
 	  player_list_counter.put(p.getUniqueId(), to_set);
+	  barCountDown(p);
   }
   
-  public boolean canUsePower(Player p, String name, int seconds){
+  public boolean canUsePower(Player p, String name){
 	  long now = System.currentTimeMillis();
 	  String get = player_list_counter.get(p.getUniqueId());
 	  if(get == null){
@@ -720,7 +745,7 @@ public void updateScoreboard(Player p) {
 			  e.printStackTrace();
 		  }
 	  }
-	  int delay = seconds * 1000;
+	  int delay = getKitName(p).getTime() * 1000;
 	  if((now - last) >= delay){
 		  return true;
 	  } else {
@@ -746,7 +771,6 @@ public void updateScoreboard(Player p) {
 	  }
 	  int delay = seconds * 1000;
 	  long milis = delay - (now - last);
-	  p.playSound(p.getLocation(), Sound.ENDERMAN_HIT, 1, 1);
 	  return Math.round(milis / 1000);
   }
   
@@ -754,7 +778,7 @@ public void updateScoreboard(Player p) {
 public void settunic(Player p, boolean fake) {
     ItemStack it = new ItemStack(Material.LEATHER_CHESTPLATE);
     LeatherArmorMeta lm = (LeatherArmorMeta) it.getItemMeta();
-    lm.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+    lm.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 2, true);
     lm.addEnchant(Enchantment.DURABILITY, 5, true);
     int t = getteam(p);
     if (t == 1) {
@@ -786,7 +810,10 @@ public void settunic(Player p, boolean fake) {
     player_list_dead = new HashMap<UUID, Boolean>();
   }
   
-  public void stopthegame(int Looser){  
+  public void stopthegame(int Looser){
+	battleOfBlocks.bb_connect.removeBar(playersingame, "ingamered");
+	battleOfBlocks.bb_connect.removeBar(playersingame, "ingameblue");
+	battleOfBlocks.bb_connect.addPlayers(playersingame, "win");
 	int Winner = 0;
     if (Looser == 2) {
       sendAll(ChatColor.YELLOW + "-------------------------------------------");
@@ -856,7 +883,7 @@ public void settunic(Player p, boolean fake) {
 					  break;
 				  }
 				  arena.updateBarWaitting(sec, time);
-				  if(sec % 10 == 0 || sec < 11) arena.sendAll(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structurateTime(arena.battleOfBlocks.msg.GAME_START_IN_X_SECONDS, sec)));
+				  if(sec % 10 == 0 || sec < 6) arena.sendAll(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structurateTime(arena.battleOfBlocks.msg.GAME_START_IN_X_SECONDS, sec)));
 				  sec--;
 				  if(arena.getConnectedPlayers() == 0 || !arena.iswaiting || arena.getConnectedPlayers() < arena.startmin) {
 					  arena.updatebarjoin();
@@ -888,7 +915,7 @@ public void finishthegame(int winner) {
 	redlife = life;
     bluelife = life;
     isstarted = false;
-    canteleport = true;
+    
     
     teleportEnd(winner);
     if(winner == 0) sendAll(PNC() + ChatColor.RED + "All the players left the game ! The game was stopped !");
@@ -933,14 +960,7 @@ private void resetArena(){
   }
   
   public void disconnect(Player player) {
-    if (battleOfBlocks.barapienabled) {
-    	try {
-    		BarAPI.removeBar(player);
-    	} catch (Exception e) {
-			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-			battleOfBlocks.barapienabled = false;
-		}
-    }
+    battleOfBlocks.bb_connect.removeAll(player);
     removeCountDownAndPotions(player);
     playersingame.remove(player);
     if (getConnectedPlayers() <= 1) {
@@ -955,69 +975,47 @@ private void resetArena(){
     restoreInventory(player);
     resetScoreboard(player);
     removeLastEssentialsLocation(player);
-    player.teleport(locend);
+    locend.getChunk().load();
+    teleportPlayer(player, locend);
     sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurate(battleOfBlocks.msg.OTHER_LEFT_THE_GAME, player, null)));
   }
   
   private void settalkbarre(){
-    if (battleOfBlocks.barapienabled) {
-      for (int i = 0; i < playersingame.size(); i++){
-        Player p = (Player) playersingame.get(i);
-        try {
-	        if (getteam(p) == 1) {
-	        	BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(bluelife, life));
-	        } else {
-	        	BarAPI.setMessage(p, ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife, pourcentage(redlife, life));
-	        }
-        } catch (Exception e) {
-			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-			battleOfBlocks.barapienabled = false;
-			break;
-		}
+      for (Player p : playersingame){
+    	  String message, bar_name;
+    	  float percent;
+    	  if (getteam(p) == 1) {
+	          message = ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife;
+	          percent = pourcentage(bluelife, life);
+	          bar_name = "ingameblue";
+	      } else {
+	    	  message = ChatColor.BLUE + "BLUE : " + bluelife + ChatColor.RESET + " , " + ChatColor.RED + "RED : " + redlife;
+	    	  percent = pourcentage(redlife, life);
+	    	  bar_name = "ingamered";
+	      }
+    	  battleOfBlocks.bb_connect.updateBarPlayer(p, bar_name, message, percent);
       }
-    }
   }
   
-  public void updatebarjoin()
-  {
-    if (battleOfBlocks.barapienabled) {
-      for (int i = 0; i < playersingame.size(); i++)
-      {
-        Player p = (Player)playersingame.get(i);
-        try {
-	        if ((startmin < getConnectedPlayers()) || (startmin == getConnectedPlayers())) {
-	          BarAPI.setMessage(p, ChatColor.GREEN + "" + getConnectedPlayers() + "/" + pmax + ChatColor.GOLD + ", " + battleOfBlocks.msg.NEED + ":" + startmin, 100.0F);
-	        } else {
-	          BarAPI.setMessage(p, ChatColor.GREEN + "" + getConnectedPlayers() + "/" + pmax + ChatColor.GOLD + ", " + battleOfBlocks.msg.NEED + ":" + startmin, pourcentage(getConnectedPlayers(), startmin));
-	        }
-        } catch (Exception e) {
-			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-			battleOfBlocks.barapienabled = false;
-			break;
-		}
-      }
-    }
+  public void updatebarjoin() {
+    	String message = ChatColor.GREEN + "" + getConnectedPlayers() + "/" + pmax + ChatColor.GOLD + ", " + battleOfBlocks.msg.NEED + ":" + startmin;
+    	float percent;
+        if ((startmin < getConnectedPlayers()) || (startmin == getConnectedPlayers())) {
+          	percent =  100.0F;
+        } else {
+        	percent = pourcentage(getConnectedPlayers(), startmin);
+        }
+        battleOfBlocks.bb_connect.updateBar(playersingame, "waiting", message, percent);
   }
   
-  public void updatebarwin(int winner)
-  {
-    if (battleOfBlocks.barapienabled) {
-      for (int i = 0; i < playersingame.size(); i++)
-      {
-        Player p = (Player)playersingame.get(i);
-        try {
-	        if (winner == 1) {
-	          BarAPI.setMessage(p, ChatColor.MAGIC + "batb  " + ChatColor.BLUE + battleOfBlocks.msg.putColor(battleOfBlocks.msg.BLUE_WIN).replaceAll(PNC(), "") + ChatColor.MAGIC + "  batb");
-	        } else {
-	          BarAPI.setMessage(p, ChatColor.MAGIC + "batb  " + ChatColor.RED + battleOfBlocks.msg.putColor(battleOfBlocks.msg.RED_WIN).replaceAll(PNC(), "") + ChatColor.MAGIC + "  batb");
-	        }
-        } catch (Exception e) {
-			Bukkit.getLogger().severe("BattleOfBlocks: Error while using BarAPI ! If you are using spigot 1.8, this may happend. Disabling BarAPI !!!");
-			battleOfBlocks.barapienabled = false;
-			break;
-		}
-      }
-    }
+  public void updatebarwin(int winner) {
+	  String message;
+	  if (winner == 1) {
+		  message = ChatColor.MAGIC + "batb  " + ChatColor.BLUE + battleOfBlocks.msg.putColor(battleOfBlocks.msg.BLUE_WIN).replaceAll(PNC(), "") + ChatColor.MAGIC + "  batb";
+	  } else {
+		  message = ChatColor.MAGIC + "batb  " + ChatColor.RED + battleOfBlocks.msg.putColor(battleOfBlocks.msg.RED_WIN).replaceAll(PNC(), "") + ChatColor.MAGIC + "  batb";
+	  }
+	  battleOfBlocks.bb_connect.updateBar(playersingame, "win", message, 100F);
   }
   
   public void setMetadata(Metadatable object, String key, Object value, BattleOfBlocks battleOfBlocks)
@@ -1051,13 +1049,13 @@ private void resetArena(){
 	            iswaiting = true;
 	            sendAll(battleOfBlocks.msg.structurate(battleOfBlocks.msg.putColor(battleOfBlocks.msg.OTHER_JOIN_THE_GAME), player, null) + ChatColor.GREEN + "(" + getConnectedPlayers() + "/" + pmax + ")");
 	            SignUtility.updateSigns();
-	            canteleport = true;
-	            player.teleport(waitroom);
-	            canteleport = false;
+	            teleportPlayer(player, waitroom);
+	            battleOfBlocks.bb_connect.addPlayer(player, "waiting");
 	            updatebarjoin();
 	            player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.YOU_JOINED_THE_GAME));
 	            setmoney(player, 0);
 	            clearInventory(player);
+	            setXP(player, 0, 0);
 	            setScoreBoard(player);
 	            updateScoreboard(player);
 	            setInventorySelect(player);
@@ -1082,7 +1080,7 @@ private void resetArena(){
           }
         } else {
         	player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_IN_GAME));
-        	player.teleport(waitroom);
+        	teleportPlayer(player, waitroom);
         }
       } else {
     	if(getConnectedPlayers() == 0) {
@@ -1111,8 +1109,12 @@ private void resetArena(){
     }
   }
   
-  public String getKitName(Player p){
-	  return p_kits.get(p.getUniqueId());
+  public PowerKit getKitName(Player p){
+	  if(player_list_powerkit.containsKey(p.getUniqueId())){
+		  return player_list_powerkit.get(p.getUniqueId());
+	  } else {
+		  return PowerKit.RANDOM;
+	  }
   }
   
   @SuppressWarnings("deprecation")
@@ -1151,18 +1153,23 @@ private List<ItemStack> setStuff(Player p) {
     nuggetg.setItemMeta(im);
     p.getInventory().setMaxStackSize(999);
     p.getInventory().setItem(8, nuggetg);
-    String kp = getKitName(p);
+    String kp = getKitName(p).getName();
     List<ItemStack> listi = new BasicKits(this).getItemsPlayer(p);
-    if(listi != null){
+    if(listi != null && getKitName(p) != PowerKit.CUSTOM){
     	for(ItemStack is : listi){
     		p.getInventory().addItem(is);
     	}
     } else {
+    	if(listi != null){
+	    	for(ItemStack is : listi){
+	    		p.getInventory().addItem(is);
+	    	}
+    	}
     	if(battleOfBlocks.kits != null) {
 	    	List<Kit> v = battleOfBlocks.kits.v;
 			for(int i = 0; i < v.size(); i++) {
 				Kit k = v.get(i);
-				if(k.name == kp) {
+				if(k.name.equalsIgnoreCase(kp)) {
 					List<ItemsKit> v2 = k.v;
 					for(int i2 = 0; i2 < v2.size(); i2++) {
 						ItemsKit ik = v2.get(i2);
@@ -1481,12 +1488,12 @@ private void clearInventory(Player p)
 			                break;
 			              }
 			              sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurateLives(battleOfBlocks.msg.BLUE_LIVES, bluelife)));
-			              canteleport = true;
-			              event.getPlayer().teleport(locstartred);
-			              canteleport = false;
+			              
+			              teleportPlayer(event.getPlayer(), locstartred);
+			              
 			              addmoney(2);
 			              settalkbarre();
-			              ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 1, 5, event.getBlock().getLocation(), playersingame);
+			              new ParticleLauncher(this).playParticle(null, event.getBlock().getLocation(), ParticleEffectConnector.EXPLOSION_LARGE);
 			              event.setCancelled(true);
 		        	  } else {
 				     		event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "You cannot destroy a bblock !");
@@ -1521,12 +1528,12 @@ private void clearInventory(Player p)
 					                	break;
 					              }
 					              sendAll(battleOfBlocks.msg.putColor(battleOfBlocks.msg.structurateLives(battleOfBlocks.msg.RED_LIVES, redlife)));
-					              canteleport = true;
-					              event.getPlayer().teleport(locstartblue);
-					              canteleport = false;
+					              
+					              teleportPlayer(event.getPlayer(),locstartblue);
+					              
 					              addmoney(1);
 					              settalkbarre();
-					              ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 1, 5, event.getBlock().getLocation(), playersingame);
+					              new ParticleLauncher(this).playParticle(null, event.getBlock().getLocation(), ParticleEffectConnector.EXPLOSION_LARGE);
 					              event.setCancelled(true);
 				    	   } else {
 					     		event.getPlayer().sendMessage(PNC() + ChatColor.GREEN + "You cannot destroy a bblock !");
@@ -1554,9 +1561,7 @@ private void clearInventory(Player p)
     	if(isstarted || iswaiting){
 		    if(isinGame(event.getPlayer())){
 				 event.setCancelled(true);
-				 canteleport = true;
-			     event.getPlayer().teleport(tronc(event.getPlayer().getLocation()));
-			     canteleport = false;
+			     teleportPlayer(event.getPlayer(), tronc(event.getPlayer().getLocation()));
 			}
     	}
     }
@@ -1610,8 +1615,8 @@ private void clearInventory(Player p)
           	  	return;
             }
           }
-    	String kit_p = getKitName(p);
-    	if(kit_p.equalsIgnoreCase("Troll")) settunic(p, false);
+    	PowerKit kit_p = getKitName(p);
+    	if(kit_p == PowerKit.TROLL) settunic(p, false);
         Damageable damage = p;
         if(event.getDamager() instanceof Player){
         	Player damager = (Player) event.getDamager();
@@ -1654,6 +1659,16 @@ private void clearInventory(Player p)
 	    	Player p = (Player) event.getEntity();
 	      	if (isinGame(p)) {
 	      		event.setCancelled(true);
+	      	}
+	    }
+	}
+	if(isstarted){
+		if ((event.getEntity() instanceof Player)) {
+	    	Player p = (Player) event.getEntity();
+	      	if (isinGame(p)) {
+	      		if(isDead(p)){
+	      			event.setCancelled(true);
+	      		}
 	      	}
 	    }
 	}
@@ -1756,9 +1771,9 @@ private void clearInventory(Player p)
 				  event.setCancelled(true);
 			  } else if(event.getMessage().equalsIgnoreCase("/status")) {
 				  event.setCancelled(true);
-				  String kit = getKitName(p);
+				  PowerKit kit = getKitName(p);
 				  if(kit != null){
-					  p.sendMessage(PNC() + ChatColor.GREEN + "Your kit:" + getKitName(p));
+					  p.sendMessage(PNC() + ChatColor.GREEN + "Your kit: " + kit.getName());
 				  } else {
 					  p.sendMessage(PNC() + ChatColor.RED + "You haven't choosen any kit for now !");
 				  }
@@ -1845,10 +1860,22 @@ private void clearInventory(Player p)
 									p.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED));
 									event.setCancelled(true);
 								} else {
-									String kit = event.getCurrentItem().getItemMeta().getDisplayName().substring(2);
-									p.sendMessage(PNC() + ChatColor.GREEN + "You have choosen the kit: " + kit);
-									p_kits.put(p.getUniqueId(), kit);
-									p.closeInventory();
+									String kit = event.getCurrentItem().getItemMeta().getDisplayName().substring(2).toUpperCase();
+									PowerKit pwu = PowerKit.fromName(kit);
+									if(pwu == null){
+										for(Kit k : battleOfBlocks.kits.v) {
+											if(k.name.equalsIgnoreCase(kit)) {
+												pwu = PowerKit.CUSTOM;
+												pwu.setCustomName(kit);
+												break;
+											}
+										}
+									}
+									if(pwu != null){
+										p.sendMessage(PNC() + ChatColor.GREEN + "You have choosen the kit: " + kit);
+										player_list_powerkit.put(p.getUniqueId(), pwu);
+										p.closeInventory();
+									}
 									event.setCancelled(true);
 								}
 							}
@@ -1864,7 +1891,7 @@ private void clearInventory(Player p)
 	  if(isstarted) {
 		  Player p = event.getPlayer();
 		  if(isinGame(p)) {
-			  p.teleport(waitroom);
+			  teleportPlayer(p, waitroom);
 			  if(getteam(p) == 1){
 				  returntothespawn(p, true, null);
 			  } else if(getteam(p) == 2) {

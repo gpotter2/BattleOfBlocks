@@ -57,13 +57,8 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 						}
 			    		try {
 			    			int test = new Integer(args[0]);
-			    			if(test < 4){
-			    				help(sender, test);
-			    				return true;
-			    			} else {
-			    				sender.sendMessage(ChatColor.RED + "This page does not exist !");
-			    				return true;
-			    			}
+		    				help(sender, test);
+		    				return true;
 						} catch (Exception e) {}
 			    		
 				    	if(args[0].equalsIgnoreCase("setstart")){
@@ -343,7 +338,7 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 								return true;
 							}
 				    		Player p = (Player) sender;
-				    		ItemStack is = p.getItemInHand();
+				    		ItemStack is = p.getInventory().getItemInMainHand();
 				    		
 				    		if(battleOfBlocks.Arenaexist(args[1])){
 				    			battleOfBlocks.getArena(args[1]).reward.add(is);
@@ -669,6 +664,10 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 							 }
 							} else if(args[0].equalsIgnoreCase("join")){
 								if(battleOfBlocks.canjoinwhithcommand){
+									if(isInAnArena((Player) sender)){
+										sender.sendMessage(PNC + ChatColor.RED +  "You are in a game !");
+										return true;
+									}
 						    		if(args.length >= 2){
 						    			String name = args[1];
 						    			if(battleOfBlocks.Arenaexist(name)){
@@ -710,7 +709,6 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 								sender.sendMessage(PNC + ChatColor.GREEN + "Usages:");
 								sender.sendMessage(ChatColor.GREEN + "/batofb leave ==> (better to use /leave) Leave the arena");
 								if(battleOfBlocks.canjoinwhithcommand) sender.sendMessage(ChatColor.GREEN + "/batofb join <arena> ==> Join an arena");
-								if(battleOfBlocks.canjoinvotewhithcommand) sender.sendMessage(ChatColor.GREEN + "/batofb joinVote <MapVoter> ==> Join a MapVoter");
 								return true;
 							} else if(args[0].equalsIgnoreCase("admin")){
 								if(battleOfBlocks.cheatadmin == false){
@@ -806,14 +804,25 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 			sender.sendMessage("Page 4");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setvip <number> <arena>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set before the start when the VIP will appear on the signs");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks tooglebreak <arena>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Enable or disable breaking in an arena (auto reset on finish)");
+			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks settime <number>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the server wait time in the WaitRoom");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcontrolname <name>  " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the name of the instance");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks setcoinskills <number>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Set the server coins reward of any kills");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks info   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Get the plugin infos !");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks saveall   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Save all the arenas (The arenas are saved automatically during the server's stop)");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks reload   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Reload completly the plugin !");
 			sender.sendMessage(ChatColor.BLUE + "[#]" + ChatColor.GREEN + "/battleofblocks update <password>   " + ChatColor.RED + " --> " + ChatColor.LIGHT_PURPLE + " Update the plugin with the password found on the latest download page !");
+		} else {
+			sender.sendMessage(ChatColor.RED + "This page does not exist !");
 		}
-		
+	}
+	
+	private boolean isInAnArena(Player p){
+		 for(Arena ar : battleOfBlocks.arenas){
+			 if(ar.isinGame(p)){
+				 return true;
+			 }
+		 }
+		 return false;
 	}
 	
 	@SuppressWarnings("deprecation")

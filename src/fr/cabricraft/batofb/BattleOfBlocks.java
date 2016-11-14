@@ -33,9 +33,6 @@ import java.util.SortedSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.permission.Permission;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -87,15 +84,18 @@ import fr.cabricraft.batofb.powerups.LoadCustomAdd;
 import fr.cabricraft.batofb.powerups.Powerups;
 import fr.cabricraft.batofb.shop.Shop;
 import fr.cabricraft.batofb.signs.SignUtility;
+import fr.cabricraft.batofb.util.BossBarConnector;
 import fr.cabricraft.batofb.util.Messages;
 import fr.cabricraft.batofb.voting.MapSign;
 import fr.cabricraft.batofb.voting.MapVoting;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 
 /**
  * This plugin is a free minigame !
  * 
  * @author gpotter2 
- * @version 2.7
+ * @version 2.9
  * 
  */
 
@@ -109,7 +109,6 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   private int defaultvip = 1;
   public List<Location> signs = new LinkedList<Location>();
   public List<MapSign> signs_vote = new LinkedList<MapSign>();
-  public boolean barapienabled;
   public boolean vaultenabled_permissions = false;
   public boolean vaultenabled_economy = false;
   public boolean essentials_enabled = false;
@@ -143,6 +142,8 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
   private boolean database_errors_notice = false;
   private boolean updatenotice = false;
   private String updatenoticemessage = null;
+  
+  public BossBarConnector bb_connect = null;
   
   public int update_id = 76657;
   public File batofb_file;
@@ -178,7 +179,13 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	  V1_6,
 	  V1_7,
 	  V1_8,
-	  OTHER;
+	  NEWER,
+	  OTHER,
+	  UNKNOWN;
+	  
+	  public boolean isRecent(){
+		  return (this == NEWER);
+	  }
   }
   
   private void detectVersion() {
@@ -195,6 +202,18 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 			} else if (minor == 8) {
 				version = VersionBukkit.V1_8;
 			} else {
+				try {
+					Class.forName("org.bukkit.boss.BossBar");
+					version = VersionBukkit.NEWER;
+				} catch( ClassNotFoundException e ) {
+					version = VersionBukkit.OTHER;
+				}
+			}
+		} else {
+			try {
+				Class.forName("org.bukkit.boss.BossBar");
+				version = VersionBukkit.NEWER;
+			} catch( ClassNotFoundException e ) {
 				version = VersionBukkit.OTHER;
 			}
 		}
@@ -255,10 +274,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
       
       this.pm.registerEvents(this, this.battleOfBlocks);
       //DETECTING PLUGINS
-      if (pm.getPlugin("BarAPI") != null) {
-    	  barapienabled = true;
-    	  getLogger().info("Using BARApi !");
-      }
+      bb_connect = new BossBarConnector(this.battleOfBlocks, pm, getLogger());
       
       if(pm.getPlugin("Vault") != null){
 	      if (setupEconomy()) {
@@ -1488,6 +1504,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "powerups.LoadCustomAdd");
 				Class.forName(base + "powerups.Powerups");
 				Class.forName(base + "powerups.PowerupsChrono");
+				Class.forName(base + "powerups.Powerups$PowerKit");
 				Class.forName(base + "shop.Shop");
 				Class.forName(base + "signs.SignUtility");
 				Class.forName(base + "util.BlockSave");

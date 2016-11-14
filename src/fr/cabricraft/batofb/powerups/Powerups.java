@@ -19,6 +19,7 @@
 package fr.cabricraft.batofb.powerups;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -47,22 +48,22 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.util.IronGolemControl;
 import fr.cabricraft.batofb.util.ParticleEffect;
 import fr.cabricraft.batofb.util.ParticleLauncher;
+import fr.cabricraft.batofb.util.ParticleLauncher.ParticleEffectConnector;
 
 public class Powerups implements Listener {
 	Arena arena;
-	List<Block> blockstoremove = new LinkedList<Block>();
 	
 	public Powerups(Arena arena){
 		this.arena = arena;
@@ -128,37 +129,69 @@ public class Powerups implements Listener {
 		return inv;
 	}
 	
+	private void chestClose(Player player){
+		try {
+			player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 10, 10);
+		} catch(Exception e){
+			try {
+			player.playSound(player.getLocation(), Sound.valueOf("CHEST_CLOSE"), 10, 10);
+			} catch(Exception e2){}
+		}
+	}
+	private void enderHit(Player player){
+		try {
+			player.playSound(player.getLocation(), Sound.ENTITY_ENDERMEN_HURT, 10, 10);
+		} catch(Exception e){
+			try {
+			player.playSound(player.getLocation(), Sound.valueOf("ENDERMAN_HIT"), 10, 10);
+			} catch(Exception e2){}
+		}
+	}
+	private void dragonGrowl(Player player){
+		try {
+			player.playSound(player.getLocation(), Sound.ENTITY_ENDERDRAGON_GROWL, 10, 10);
+		} catch(Exception e){
+			try {
+			player.playSound(player.getLocation(), Sound.valueOf("ENDERDRAGON_GROWL"), 10, 10);
+			} catch(Exception e2){}
+		}
+	}
+	
 	public void removeforcefield(Player p){
 		p.getInventory().setHelmet(null);
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
+		chestClose(p);
 		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "forcefield", null)));
 	}
 	
 	public void removefireball(Player p){
-		p.getInventory().remove(Material.BLAZE_POWDER);
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
-		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "fireball", null)));
+		if(p.getInventory().contains(Material.BLAZE_POWDER)){
+			p.getInventory().remove(Material.BLAZE_POWDER);
+			chestClose(p);
+			p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "fireball", null)));
+		}
 	}
 	
 	public void removekb(Player p){
-		p.getInventory().remove(Material.STICK);
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
-		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "knockback", null)));
+		if(p.getInventory().contains(Material.STICK)){
+			p.getInventory().remove(Material.STICK);
+			chestClose(p);
+			p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "knockback", null)));
+		}
 	}
 	public void removejump(Player p){
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
+		chestClose(p);
 		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "jump", null)));
 	}
 
 	public void removeberserk(Player p){
 		arena.settunic(p, false);
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
+		chestClose(p);
 		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "berserk", null)));
 	}
 	
 	public void removeinvisible(Player p){
 		arena.settunic(p, false);
-		p.playSound(p.getLocation(), Sound.CHEST_CLOSE, 10, 10);
+		chestClose(p);
 		p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP_END, "invisibility", null)));
 	}
 	
@@ -208,8 +241,8 @@ public class Powerups implements Listener {
 		return l;
 	}
 	
-	public void appearWall(Player p){
-		List<Block> lb = get9BlockInFrontOfPlayer(p);
+	public void appearWall(final Player p){
+		final List<Block> lb = get9BlockInFrontOfPlayer(p);
 		List<Block> blocks_to_remove = new LinkedList<Block>();
 		for(Block b : lb){
 			if(b.getType() == Material.AIR){
@@ -224,10 +257,15 @@ public class Powerups implements Listener {
 	
 	public void removeWall(Object list){
 		@SuppressWarnings("unchecked")
-		List<Block> lb = (List<Block>) list;
-		for(Block b : lb){
-			blockstoremove.add(b);
-		}
+		final List<Block> lb = (List<Block>) list;
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				for(Block b : lb){
+					b.setType(Material.AIR);
+				}
+			}
+		}.runTask(arena.battleOfBlocks);
 	}
 	private static BlockFace getDirection(Location loc) {
 		float dir = Math.round(loc.getYaw() / 90);
@@ -333,11 +371,11 @@ public class Powerups implements Listener {
 									int t = arena.getteam(p);
 									p.sendMessage(ChatColor.GREEN + "BOOM  ...");
 									arena.sendAll(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.structuratePowerups(arena.battleOfBlocks.msg.POWERUP, "TNT BOOM", p)));
-									p.playSound(p.getLocation(), Sound.ENDERDRAGON_GROWL, 10, 10);
+									dragonGrowl(p);
 									for(int i = 0; i < arena.playersingame.size(); i++){
 										Player p2 = arena.playersingame.get(i);
 										int t2 = arena.getteam(p2);
-										p2.playSound(p2.getLocation(), Sound.ENDERDRAGON_GROWL, 10, 10);
+										dragonGrowl(p2);
 										if(t != t2){
 											arena.returntothespawn(p2, true, null);
 										}
@@ -387,7 +425,7 @@ public class Powerups implements Listener {
 									arena.pay(p,70);
 									p.closeInventory();
 									p.sendMessage(arena.battleOfBlocks.msg.putColor(arena.battleOfBlocks.msg.HERE_YOU_ARE));
-									ItemStack b_r = new ItemStack(Material.BLAZE_POWDER);
+									ItemStack b_r = new ItemStack(Material.BLAZE_POWDER, 3);
 									ItemMeta i_b_r = b_r.getItemMeta();
 									i_b_r.setDisplayName(ChatColor.GREEN + "FIREBALLS !");
 									b_r.setItemMeta(i_b_r);
@@ -570,6 +608,53 @@ public class Powerups implements Listener {
 		}
 	}
 	
+	public static enum PowerKit {
+		MAGE(10),
+		SPY(35),
+		PHOENIX(10),
+		SHAMEN(15),
+		HEALER(3),
+		FURY(10),
+		TROLL(30),
+		CUSTOM(0),
+		RANDOM(0);
+		
+		private int time;
+		
+		private String customname = null;
+		
+		private PowerKit(int time){
+			this.time = time;
+		}
+		
+		public int getTime(){
+			return time;
+		}
+		public void setCustomName(String custom_name){
+			this.customname = custom_name;
+		}
+		public String getName(){
+			if(customname == null) return this.toString();
+			else return customname;
+		}
+		
+		private static List<String> nameValues(){
+			List<String> l = new ArrayList<String>();
+			for(PowerKit pk : Arrays.asList(PowerKit.values())){
+				l.add(pk.getName());
+			}
+			return l;
+		}
+		
+		public static PowerKit fromName(String name){
+			if(nameValues().contains(name)){
+				return PowerKit.valueOf(name);
+			} else {
+				return null;
+			}
+		}
+	}
+	
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void functionBar(PlayerInteractEvent event){
@@ -587,10 +672,11 @@ public class Powerups implements Listener {
 					return;
 				}
 				String itemName = is.getItemMeta().getDisplayName().substring(2);
-				if(itemName.equals("Flash !")){
-					if(arena.canUsePower(p, itemName, 10)){
+				PowerKit kit = arena.getKitName(p);
+				if(itemName.equals("Flash !") && kit == PowerKit.MAGE){
+					if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
-						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffect.SMOKE_LARGE);
+						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffectConnector.SMOKE_LARGE);
 						for(LivingEntity le : l){
 							if(le instanceof Player){
 								Player damaged = (Player) le;
@@ -609,22 +695,22 @@ public class Powerups implements Listener {
 						}
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "Pow !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 10) + " seconds before using this item again !");
+						enderHit(p);
 					}
 					event.setCancelled(true);
-				} else if(itemName.equals("Invisibility !")){
-					if(arena.canUsePower(p, itemName, 35)){
+				} else if(itemName.equals("Invisibility !") && kit == PowerKit.SPY){
+					if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
 						makeInvisible(p);
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "You are now invisible for 10 sec !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 35) + " seconds before using this item again !");
+						enderHit(p);
 					}
 					event.setCancelled(true);
-			    } else if(itemName.equals("Inferno !")){
-			    	if(arena.canUsePower(p, itemName, 10)){
+			    } else if(itemName.equals("Inferno !") && kit == PowerKit.PHOENIX){
+			    	if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
-						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffect.ENCHANTMENT_TABLE);
+						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffectConnector.ENCHANTMENT_TABLE);
 						for(LivingEntity le : l){
 							if(le instanceof Player){
 								Player damaged = (Player) le;
@@ -641,23 +727,26 @@ public class Powerups implements Listener {
 						}
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "BURN !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 10) + " seconds before using this item again !");
+						enderHit(p);
 					}
 			    	event.setCancelled(true);
-			    } else if(itemName.equals("Nature protection !")){
-			    	if(arena.canUsePower(p, itemName, 15)){
+			    } else if(itemName.equals("Nature protection !") && kit == PowerKit.SHAMEN){
+			    	if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
 						appearWall(p);
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "Wow !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 15) + " seconds before using this item again !");
+						enderHit(p);
 					}
 			    	event.setCancelled(true);
-			    } else if(itemName.equals("Healer !")){
-			    	if(arena.canUsePower(p, itemName, 3)){
+			    } else if(itemName.equals("Healer !") && kit == PowerKit.HEALER){
+			    	if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
-						boolean healed = true;
-						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffect.FLAME);
+						boolean healed_or_not = false;
+						boolean damaged_or_not = false;
+						int healed_prople = 0;
+						int damaged_people = 0;
+						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffectConnector.FLAME);
 						for(LivingEntity le : l){
 							if(le instanceof Player){
 								Player damaged = (Player) le;
@@ -668,38 +757,49 @@ public class Powerups implements Listener {
 										} else {
 											le.setHealth(le.getHealth() + 4);
 										}
+										healed_or_not = true;
+										healed_prople++;
 									} else {
-										healed = false;
-										le.damage(4, p);
+										le.damage(2, p);
 										le.setLastDamageCause(new EntityDamageByEntityEvent(p, le, DamageCause.CUSTOM, 4));
-										if(p.getHealth() + 4 > p.getMaxHealth()){
+										if(p.getHealth() + 2 > p.getMaxHealth()){
 											p.setHealth(p.getMaxHealth());
 										} else {
-											p.setHealth(p.getHealth() + 4);
+											p.setHealth(p.getHealth() + 2);
 										}
+										damaged_or_not = true;
+										damaged_people++;
 									}
+								}
+							} else {
+								le.damage(4, p);
+								le.setLastDamageCause(new EntityDamageByEntityEvent(p, le, DamageCause.CUSTOM, 4));
+								if(p.getHealth() + 4 > p.getMaxHealth()){
+									p.setHealth(p.getMaxHealth());
+								} else {
+									p.setHealth(p.getHealth() + 4);
 								}
 							}
 						}
-						if(healed) p.sendMessage(arena.PNC() + ChatColor.RED + "\u2764\u2764\u2764");
-						else p.sendMessage(arena.PNC() + ChatColor.BLACK + "\u2764\u2764\u2764");
+						if(healed_or_not) p.sendMessage(ChatColor.RED + "\u2764\u2764" + ChatColor.GREEN + " was added to " + healed_prople + " people !");
+						if(damaged_or_not) p.sendMessage( ChatColor.BLACK + "\u2764" + ChatColor.GREEN + " was stolen to " + damaged_people + " people !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 3) + " seconds before using this item again !");
+						enderHit(p);
 					}
 			    	event.setCancelled(true);
-			    } else if(itemName.equals("Team color !")){
-			    	if(arena.canUsePower(p, itemName, 30)){
+			    } else if(itemName.equals("Team color !") && kit == PowerKit.TROLL){
+			    	if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
 						arena.settunic(p, true);
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "You are now disguised ! Any powerup or damage will remove it !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 30) + " seconds before using this item again !");
+						enderHit(p);
 					}
 			    	event.setCancelled(true);
-			    } else if(itemName.equals("Fury !")){
-			    	if(arena.canUsePower(p, itemName, 10)){
+			    } else if(itemName.equals("Fury !") && kit == PowerKit.FURY){
+			    	if(arena.canUsePower(p, itemName)){
 						arena.setCountDown(p, itemName);
-						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffect.VILLAGER_HAPPY);
+						List<LivingEntity> l = new ParticleLauncher(arena).launchFirework(p, ParticleEffectConnector.VILLAGER_HAPPY);
 						for(LivingEntity le : l){
 							if(le instanceof Player){
 								Player damaged = (Player) le;
@@ -720,7 +820,7 @@ public class Powerups implements Listener {
 						}
 						p.sendMessage(arena.PNC() + ChatColor.GREEN + "Lol !");
 					} else {
-						p.sendMessage(arena.PNC() + ChatColor.RED + "Please wait " + arena.timeBeforeUse(p, itemName, 10) + " seconds before using this item again !");
+						enderHit(p);
 					}
 			    	event.setCancelled(true);
 			    }
@@ -747,7 +847,19 @@ public class Powerups implements Listener {
 						if(event.getItem().getItemMeta().getDisplayName() != null){
 							String itemname = event.getItem().getItemMeta().getDisplayName().substring(2);
 							 if(itemname.equalsIgnoreCase("FIREBALLS !")){
-								 p.launchProjectile(Fireball.class);
+								 int number = event.getItem().getAmount();
+								 if(p.getInventory().contains(Material.BLAZE_POWDER)){
+									 int tnbr = p.getInventory().first(Material.BLAZE_POWDER);
+									 if(number == 1){
+										 p.launchProjectile(Fireball.class);
+										 p.getInventory().remove(Material.BLAZE_POWDER);
+									 } else if(number > 1){
+										 ItemStack newis = event.getItem().clone();
+										 newis.setAmount((number-1));
+										 p.launchProjectile(Fireball.class);
+										 p.getInventory().setItem(tnbr, newis);
+									 }
+								 }
 							 } else if(itemname.equalsIgnoreCase("REDSTONE-POWER !")){
 								 Location l = arena.battleOfBlocks.getTargetBlock(p, 7).getLocation();
 								 l.setPitch(p.getLocation().getPitch());
@@ -791,7 +903,9 @@ public class Powerups implements Listener {
 			if(arena.isinGame(p)){
 				 if(p.getInventory().getHelmet() != null) {
 					 if(p.getInventory().getHelmet().getType() == Material.BRICK){
-							event.setCancelled(true);
+						event.setCancelled(true);
+						org.bukkit.util.Vector vector = p.getLocation().toVector().subtract(event.getDamager().getLocation().toVector()).normalize().multiply(0.7);
+						punsh(p, vector);
 					 }
 				 }
 				 if(event.getDamager().getType() == EntityType.SNOWBALL){
@@ -799,18 +913,6 @@ public class Powerups implements Listener {
 					 p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200 ,2));
 				 }
 			}
-		}
-	}
-	
-	@EventHandler
-	public void onMove(PlayerMoveEvent event){
-		if(arena.isstarted){
-			 if(blockstoremove.size() != 0){
-				 for(Block b : blockstoremove){
-					 b.setType(Material.AIR);
-				 }
-				 blockstoremove.clear();
-			 }
 		}
 	}
 }
