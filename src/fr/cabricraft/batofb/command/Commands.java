@@ -338,7 +338,8 @@ public boolean onCommand(CommandSender sender, Command cmd, String label, String
 								return true;
 							}
 				    		Player p = (Player) sender;
-				    		ItemStack is = p.getInventory().getItemInMainHand();
+				    		@SuppressWarnings("deprecation")
+							ItemStack is = p.getInventory().getItemInHand();
 				    		
 				    		if(battleOfBlocks.Arenaexist(args[1])){
 				    			battleOfBlocks.getArena(args[1]).reward.add(is);

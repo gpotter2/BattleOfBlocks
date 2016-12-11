@@ -300,7 +300,7 @@ public class TitleSender {
 		if(JSONtitle != null){
 			JSONtitle_component = getIChatBaseComponent.invoke(IChatBaseComponent_class, JSONtitle);
 		} else {
-			JSONtitle_component = getIChatBaseComponent.invoke(IChatBaseComponent_class, "{text:''}");
+			JSONtitle_component = getIChatBaseComponent.invoke(IChatBaseComponent_class, "{\"text\":\"\"}");
 		}
 		if(JSONsubtitle != null){
 			JSONsubtitle_component = getIChatBaseComponent.invoke(IChatBaseComponent_class, JSONsubtitle);

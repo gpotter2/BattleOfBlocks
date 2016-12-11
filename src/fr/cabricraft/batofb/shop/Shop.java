@@ -46,7 +46,6 @@ import fr.cabricraft.batofb.powerups.CustomAddPower;
 
 public class Shop implements Listener {
 	BattleOfBlocks battleOfBlocks;
-	String PNC = ChatColor.RED + "[BattleOfBlocks] " + ChatColor.RESET;
 	public Shop(BattleOfBlocks battleOfBlocks){
 		this.battleOfBlocks = battleOfBlocks;
 	}
@@ -91,7 +90,7 @@ public class Shop implements Listener {
 		ItemMeta im = i.getItemMeta();
 		if(hasBoughtPerk(p, name)){
 			im.setDisplayName(ChatColor.GRAY + name);
-			l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_BOUGHT).replaceAll(PNC, ""));
+			l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.ALREADY_BOUGHT));
 		} else {
 			String permission;
 			if(perm == "none" || perm == null){
@@ -106,7 +105,7 @@ public class Shop implements Listener {
 					l.add(ChatColor.GREEN + "Clic here to buy !");
 				} else {
 					im.setDisplayName(ChatColor.RED + name);
-					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+					l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
 				}
 			} else {
 				if(battleOfBlocks.hasPermission(p, permission)){
@@ -116,11 +115,11 @@ public class Shop implements Listener {
 						l.add(ChatColor.GREEN + "Clic here to buy !");
 					} else {
 						im.setDisplayName(ChatColor.RED + name);
-						l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+						l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
 					}
 				} else {
 					im.setDisplayName(ChatColor.RED + name);
-					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+					l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.PERMISSION_DENIED));
 				}
 			}
 		}
@@ -139,7 +138,7 @@ public class Shop implements Listener {
 		ItemMeta im = i.getItemMeta();
 		if(hasBoughtKit(p, name)){
 			im.setDisplayName(ChatColor.GRAY + name);
-			l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.ALREADY_BOUGHT).replaceAll(PNC, ""));
+			l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.ALREADY_BOUGHT));
 		} else {
 			String permission;
 			if(perm == "none"){
@@ -156,7 +155,7 @@ public class Shop implements Listener {
 					l.add(ChatColor.GREEN + "Clic here to buy !");
 				} else {
 					im.setDisplayName(ChatColor.RED + name);
-					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+					l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
 				}
 			} else {
 				if(battleOfBlocks.hasPermission(p, permission)){
@@ -166,11 +165,11 @@ public class Shop implements Listener {
 						l.add(ChatColor.GREEN + "Clic here to buy !");
 					} else {
 						im.setDisplayName(ChatColor.RED + name);
-						l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.NOT_ENOUGH_MONEY).replaceAll(PNC, ""));
+						l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.NOT_ENOUGH_MONEY));
 					}
 				} else {
 					im.setDisplayName(ChatColor.RED + name);
-					l.add(battleOfBlocks.msg.putColor(battleOfBlocks.msg.PERMISSION_DENIED).replaceAll(PNC, ""));
+					l.add(battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.PERMISSION_DENIED));
 				}
 			}
 		}

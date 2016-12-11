@@ -180,8 +180,7 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	  V1_7,
 	  V1_8,
 	  NEWER,
-	  OTHER,
-	  UNKNOWN;
+	  OTHER;
 	  
 	  public boolean isRecent(){
 		  return (this == NEWER);
@@ -1444,11 +1443,11 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    }
 	    
 		public Block getTargetBlock(Player p, int lengh){
-	    	if(version == VersionBukkit.V1_7 || version == VersionBukkit.V1_6 || version == VersionBukkit.OTHER){
+	    	if(version == VersionBukkit.V1_7 || version == VersionBukkit.V1_6){
 	    		@SuppressWarnings("deprecation")
 	    		Block target = p.getTargetBlock((HashSet<Byte>) null, lengh);
 	    		return target;
-	    	} else if(version == VersionBukkit.V1_8) {
+	    	} else if(version == VersionBukkit.V1_8 || version == VersionBukkit.NEWER || version == VersionBukkit.OTHER) {
 	    		return p.getTargetBlock((Set<Material>) null, lengh);
 	    	}
 	    	return null;
@@ -1483,7 +1482,6 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 	    }
 	    
 	    public boolean compilationSuccess(){
-	    	getLogger().info("Checking valuability of the file...");
 	    	String base = "fr.cabricraft.batofb.";
 			try {
 				//Class tests
@@ -1508,12 +1506,15 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				Class.forName(base + "shop.Shop");
 				Class.forName(base + "signs.SignUtility");
 				Class.forName(base + "util.BlockSave");
+				Class.forName(base + "util.BossBarConnector");
 				Class.forName(base + "util.ClassTaker");
 				Class.forName(base + "util.IronGolemChorno");
 				Class.forName(base + "util.IronGolemControl");
 				Class.forName(base + "util.Messages");
 				Class.forName(base + "util.ParticleEffect");
 				Class.forName(base + "util.ParticleLauncher");
+				Class.forName(base + "util.ParticleEffect$ParticleData");
+				Class.forName(base + "util.ParticleLauncher$ParticleEffectConnector");
 				Class.forName(base + "util.ReflectionUtils");
 				Class.forName(base + "util.Verified");
 				Class.forName(base + "util.TitleSender");
@@ -1522,8 +1523,6 @@ public class BattleOfBlocks extends JavaPlugin implements Listener {
 				//
 				//Sub class tests
 				//
-				
-				getLogger().info("This file was successfuly compiled !");
 				return true;
 			} catch(NoClassDefFoundError e){
 				getLogger().severe("######################################################");

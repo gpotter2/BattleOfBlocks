@@ -382,7 +382,52 @@ public enum ParticleEffect {
 	 * <li>The offset values have no influence on this particle effect
 	 * </ul>
 	 */
-	MOB_APPEARANCE("mobappearance", 41, 8);
+	MOB_APPEARANCE("mobappearance", 41, 8),
+	/**
+	 * A particle effect which is displayed by ender dragon:
+	 * <ul>
+	 * <li>It looks like witch spell
+	 * <li>The speed value has no influence on this particle effect
+	 * <li>The offset values have no influence on this particle effect
+	 * </ul>
+	 */
+	DRAGON_BREATH("dragonbreath", 42, 9),
+	/**
+	 * A particle effect which is displayed by skulker bullets and end rods:
+	 * <ul>
+	 * <li>It looks like slow falling snow
+	 * <li>The speed value has no influence on this particle effect
+	 * <li>The offset values have no influence on this particle effect
+	 * </ul>
+	 */
+	END_ROD("endRod", 43, 9),
+	/**
+	 * A particle effect which is displayed by mobs when damaged:
+	 * <ul>
+	 * <li>It looks like small hearts
+	 * <li>The speed value has no influence on this particle effect
+	 * <li>The offset values have no influence on this particle effect
+	 * </ul>
+	 */
+	DAMAGE_INDICATOR("damageIndicator", 44, 9),
+	/**
+	 * A particle effect which is displayed by swinging a sword:
+	 * <ul>
+	 * <li>It looks like a sword being swung
+	 * <li>The speed value has no influence on this particle effect
+	 * <li>The offset values have no influence on this particle effect
+	 * </ul>
+	 */
+	SWEEP_ATTACK("sweepAttack", 45, 9),
+	/**
+	 * A particle effect which is displayed by unstable sand and gravel:
+	 * <ul>
+	 * <li>It looks like a small dust cloud
+	 * <li>The offset values have no influence on this particle effect
+	 * </ul>
+	 */
+	FALLING_DUST("fallingdust", 46, 10, ParticleProperty.REQUIRES_DATA);
+	
 
 	private static final Map<String, ParticleEffect> NAME_MAP = new HashMap<String, ParticleEffect>();
 	private static final Map<Integer, ParticleEffect> ID_MAP = new HashMap<Integer, ParticleEffect>();
@@ -531,7 +576,7 @@ public enum ParticleEffect {
 	 * @return Whether the data type is correct or not
 	 */
 	private static boolean isDataCorrect(ParticleEffect effect, ParticleData data) {
-		return ((effect == BLOCK_CRACK || effect == BLOCK_DUST) && data instanceof BlockData) || (effect == ITEM_CRACK && data instanceof ItemData);
+		return ((effect == BLOCK_CRACK || effect == BLOCK_DUST || effect == FALLING_DUST) && data instanceof BlockData) || (effect == ITEM_CRACK && data instanceof ItemData);
 	}
 
 	/**
@@ -1404,7 +1449,7 @@ public enum ParticleEffect {
 				return;
 			}
 			try {
-				version = Integer.parseInt(Character.toString(PackageType.getServerVersion().charAt(3)));
+				version = Integer.parseInt(PackageType.getServerVersion().split("_")[1]);
 				if (version > 7) {
 					enumParticle = PackageType.MINECRAFT_SERVER.getClass("EnumParticle");
 				}
@@ -1545,7 +1590,7 @@ public enum ParticleEffect {
 		 * @author DarkBlade12
 		 * @since 1.5
 		 */
-		private static final class VersionIncompatibleException extends RuntimeException {
+		public static final class VersionIncompatibleException extends RuntimeException {
 			private static final long serialVersionUID = 3203085387160737484L;
 
 			/**

@@ -1,6 +1,7 @@
 package fr.cabricraft.batofb.util;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -25,7 +26,6 @@ public class BossBarConnector {
 	public BossBarConnector(BattleOfBlocks battleofblocks, PluginManager pm, Logger logger){
 		if(BattleOfBlocks.version.isRecent()){
 			apiSupported = true;
-			logger.info("Hooked API NORMAL !");
 		}
 		if (pm.getPlugin("BarAPI") != null) {
 			if(apiSupported){
@@ -38,11 +38,16 @@ public class BossBarConnector {
 	}
 	
 	public void removeBar(List<Player> list_p, String bar_name){
+		removeBar(list_p, bar_name, true);
+	}
+	
+	private void removeBar(List<Player> list_p, String bar_name, boolean remove_array){
 		if(apiSupported){
 			BossBar bb = boss_bar_list.get(bar_name);
+			if(bb == null) return;
 			bb.removeAll();
 			bb.setVisible(false);
-			boss_bar_list.remove(bar_name);
+			if(remove_array) boss_bar_list.remove(bar_name);
 		} else if (barapienabled) {
         	try {
         		for(Player p : list_p){
@@ -122,8 +127,9 @@ public class BossBarConnector {
 	public void removeAll(List<Player> players){
 		if(apiSupported){
 			for(String k : boss_bar_list.keySet()){
-				removeBar(null, k);
+				removeBar(null, k, false);
 			}
+			boss_bar_list.clear();
 		} else if (barapienabled) {
 			for(Player p : players){
 				removeAll(p);

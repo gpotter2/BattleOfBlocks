@@ -32,12 +32,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import fr.cabricraft.batofb.BattleOfBlocks;
+import fr.cabricraft.batofb.BattleOfBlocks.VersionBukkit;
 import fr.cabricraft.batofb.arenas.Arena;
+import fr.cabricraft.batofb.util.ParticleEffect.ParticlePacket.VersionIncompatibleException;
 import fr.cabricraft.batofb.util.ParticleEffect.ParticleProperty;
 
 public class ParticleLauncher {
 	
 	Arena ar;
+	private boolean supportPackets = true;
 	
 	public static enum ParticleEffectConnector {
 		EXPLOSION_LARGE,
@@ -51,6 +54,9 @@ public class ParticleLauncher {
 		}
 		
 		public Particle getParticle(){
+			if(this == FLAME){
+				return Particle.LAVA;
+			}
 			return Particle.valueOf(this.toString());
 		}
 	}
@@ -87,16 +93,17 @@ public class ParticleLauncher {
 					e.printStackTrace();
 				}
 		  }
-//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 2.0F);
-//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.5F);
-//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.4F);
-//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.3F);
-//		   p.getWorld().playSound(p.getLocation(), Sound.EXPLODE, 0.1F, 1.2F);
-		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 2.0F);
-		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.5F);
-		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.4F);
-		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.3F);
-		   p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.1F, 1.2F);
+		  Sound sound_explode;
+		  if(BattleOfBlocks.version == VersionBukkit.NEWER || BattleOfBlocks.version == VersionBukkit.OTHER){
+			  sound_explode = Sound.valueOf("ENTITY_GENERIC_EXPLODE");
+		  } else {
+			  sound_explode = Sound.valueOf("EXPLODE");
+		  }
+		  p.getWorld().playSound(p.getLocation(), sound_explode, 0.1F, 2.0F);
+		  p.getWorld().playSound(p.getLocation(), sound_explode, 0.1F, 1.5F);
+		  p.getWorld().playSound(p.getLocation(), sound_explode, 0.1F, 1.4F);
+		  p.getWorld().playSound(p.getLocation(), sound_explode, 0.1F, 1.3F);
+		  p.getWorld().playSound(p.getLocation(), sound_explode, 0.1F, 1.2F);
 		  for(LivingEntity le : hitted){
 			  le.playEffect(EntityEffect.HURT);
 		  }
@@ -191,20 +198,26 @@ public class ParticleLauncher {
 	}
 	
 	public void playParticle(Vector direction, Location loc, ParticleEffectConnector pec) {
-		if(BattleOfBlocks.version.isRecent()){
+		if(supportPackets){
+			try {
+				ParticleEffect pe = pec.getParticleEffect();
+				if(pe.hasProperty(ParticleProperty.DIRECTIONAL)){
+					ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
+					ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
+				} else {
+					ParticleEffect.fromName(pe.getName()).display(1, 1, 1, 1F, 2, around(loc), ar.playersingame);
+					ParticleEffect.fromName(pe.getName()).display(1, 1, 1, 1F, 2, around(loc), ar.playersingame);
+				}
+			} catch (VersionIncompatibleException e){
+				supportPackets = false;	
+			}
+		}
+		if(!supportPackets){
 			Particle pe = pec.getParticle();
 			for(Player p : ar.playersingame){
-				p.spawnParticle(pe, around(loc), 2, 100, 100, 100);
-				p.spawnParticle(pe, around(loc), 2, 100, 100, 100);
-			}
-		} else {
-			ParticleEffect pe = pec.getParticleEffect();
-			if(pe.hasProperty(ParticleProperty.DIRECTIONAL)){
-				ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
-				ParticleEffect.fromName(pe.getName()).display(direction, 1F, loc, ar.playersingame);
-			} else {
-				ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
-				ParticleEffect.fromName(pe.getName()).display(100, 100, 100, 1F, 2, around(loc), ar.playersingame);
+				System.out.println(p.getName());
+				p.spawnParticle(pe, around(loc), 2, 0, 0, 0);
+				p.spawnParticle(pe, around(loc), 2, 0, 0, 0);
 			}
 		}
     }

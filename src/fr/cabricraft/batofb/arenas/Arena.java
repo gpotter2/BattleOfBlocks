@@ -103,6 +103,7 @@ import fr.cabricraft.batofb.kits.Kit;
 import fr.cabricraft.batofb.powerups.Powerups.PowerKit;
 import fr.cabricraft.batofb.signs.SignUtility;
 import fr.cabricraft.batofb.util.BlockSave;
+import fr.cabricraft.batofb.util.Messages;
 import fr.cabricraft.batofb.util.ParticleLauncher;
 import fr.cabricraft.batofb.util.ParticleLauncher.ParticleEffectConnector;
 import fr.cabricraft.batofb.util.TitleSender;
@@ -200,7 +201,7 @@ private void checkBlocks(){
   }
   
   public String PNC(){
-		return ChatColor.RED + "[" + battleOfBlocks.controlname + "] " + ChatColor.RESET;
+		return Messages.PNC();
   }
   
   public void sendAll(String message)
@@ -493,12 +494,12 @@ public void updateScoreboard(Player p) {
 	  p.playNote(p.getLocation(), Instrument.SNARE_DRUM, Note.natural(1, Tone.C));
 	  p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 100));
 	  p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 100, -100));
-	  if(BattleOfBlocks.version == VersionBukkit.V1_8){
+	  if(BattleOfBlocks.version == VersionBukkit.V1_8 || BattleOfBlocks.version == VersionBukkit.NEWER || BattleOfBlocks.version == VersionBukkit.OTHER){
 		  	try {
 				if(killer != null){
-					TitleSender.sendTitleAndSubTitle(p, "{text:'" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "',color:red}", "{text:'Killed by ',color:yellow,extra:[{text:'" + killer.getName() + "',color:red}]}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
+					TitleSender.sendTitleAndSubTitle(p, "{\"text\":\"" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "\",\"color\":\"red\"}", "{\"text\":\"Killed by \",\"color\":\"yellow\",\"extra\":[{\"text\":\"" + killer.getName() + "\",\"color\":\"red\"}]}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
 				} else {
-					TitleSender.sendTitleAndSubTitle(p, "{text:'" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "',color:red}", "{text:'Sucid !',color:yellow}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
+					TitleSender.sendTitleAndSubTitle(p, "{\"text\":\"" + battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.YOU_DIE) + "\",\"color\":\"red\"}", "{\"text\":\"Sucid !\",\"color\":\"yellow\"}", 10, ((battleOfBlocks.respawnTime*20) - 3), 10);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -601,7 +602,7 @@ public void updateScoreboard(Player p) {
   }
   
   public void updateBarWaitting(int time_restant, int time_finish){
-	  String message = PNC() + ChatColor.WHITE + ": " + ChatColor.GOLD + time_restant;
+	  String message = battleOfBlocks.msg.putColorRemovePNC(battleOfBlocks.msg.structurateTime(battleOfBlocks.msg.GAME_START_IN_X_SECONDS, time_restant));
 	  Float percent = 100 - (pourcentage((time_finish - time_restant), time_finish));
 	  battleOfBlocks.bb_connect.updateBar(playersingame, "waiting", message, percent);
   }
@@ -1073,7 +1074,7 @@ private void resetArena(){
 	            			  arena.sendAll(arena.PNC() + ChatColor.GREEN + "The game started !");
 	            			  arena.startthegame();
 	            		}
-	            	}, (BattleOfBlocks.time * 20));
+	            	}, ((BattleOfBlocks.time * 20) + 1));
 	            }
           } else {
         	  player.sendMessage(battleOfBlocks.msg.putColor(battleOfBlocks.msg.TOO_MANY_PEOPLE));
@@ -1222,7 +1223,7 @@ private void clearInventory(Player p)
   
   private void chooseteamh(CommandSender pl)
   {
-    Player p = (Player)pl;
+    Player p = (Player) pl;
     if (nbrblue() == nbrred()) {
       int h = (int)(Math.random() * 2.0D);
       if (h == 1) {
@@ -1398,7 +1399,6 @@ private void clearInventory(Player p)
     } else {
 	    if (isinGame(event.getPlayer())) {
 	    	event.setCancelled(true);
-	    	event.getPlayer().updateInventory();
 	    }
     }
   }

@@ -58,7 +58,6 @@ import org.bukkit.util.Vector;
 
 import fr.cabricraft.batofb.arenas.Arena;
 import fr.cabricraft.batofb.util.IronGolemControl;
-import fr.cabricraft.batofb.util.ParticleEffect;
 import fr.cabricraft.batofb.util.ParticleLauncher;
 import fr.cabricraft.batofb.util.ParticleLauncher.ParticleEffectConnector;
 
@@ -247,7 +246,7 @@ public class Powerups implements Listener {
 		for(Block b : lb){
 			if(b.getType() == Material.AIR){
 				b.setType(Material.DIRT);
-				ParticleEffect.VILLAGER_HAPPY.display(2, 2, 2, 1, 10, b.getLocation(), arena.playersingame);
+				new ParticleLauncher(arena).playParticle(new Vector(0,0,0), b.getLocation(), ParticleEffectConnector.VILLAGER_HAPPY);
 				blocks_to_remove.add(b);
 			}
 		}
@@ -823,8 +822,18 @@ public class Powerups implements Listener {
 						enderHit(p);
 					}
 			    	event.setCancelled(true);
+			    	updateInventoryMain(p);
 			    }
 			}
+		}
+	}
+	
+	private void updateInventoryMain(Player p){
+		@SuppressWarnings("deprecation")
+		ItemStack is_ = p.getInventory().getItemInHand();
+		if(is_.getType().isBlock() || is_.getType() == Material.VINE){
+	    	p.getInventory().removeItem(is_);
+	    	p.getInventory().addItem(is_);
 		}
 	}
 	
